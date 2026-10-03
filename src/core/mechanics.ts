@@ -7,6 +7,23 @@ import { BIZ } from './data/businesses';
 import { next } from './rng';
 import { notify } from './notify';
 
+/** The business category each region's signature mechanic acts on. Every region has a tier-1
+ *  starter business in this category, so the mechanic shapes the first minutes of play. */
+export const SIGNATURE_CATEGORY: Record<RegionId, Category> = {
+  solenne: 'logistics', redmesa: 'energy', neonvale: 'tech', amberfield: 'agri', verano: 'hospitality', ironhold: 'industry',
+};
+
+// ── Port Solenne: Free Port ───────────────────────────────────────────────────
+/** Legal exports from Solenne carry a free-port certificate: the destination's import tariff × this. */
+export const FREE_PORT_CERT = 0.5;
+/** Your Solenne logistics businesses earn +PORT_BONUS per shipment of yours moving through the port. */
+export const PORT_BONUS = 0.2;
+export const PORT_MAX_SHIPS = 3;
+/** Traders based in Solenne start with this many shipping slots (everyone else: 1). */
+export const SOLENNE_START_SLOTS = 2;
+export const portShipments = (s: GameState) => s.shipments.filter((x) => x.from === 'solenne' || x.to === 'solenne').length;
+export const portMult = (s: GameState) => 1 + PORT_BONUS * Math.min(PORT_MAX_SHIPS, portShipments(s));
+
 // ── Amberfield: Seasons & Harvests ────────────────────────────────────────────
 export const SEASONS = ['Planting', 'Growing', 'Harvest', 'Winter'] as const;
 export const SEASON_MULT = [0.75, 1.0, 1.6, 0.5];
@@ -33,13 +50,27 @@ export function ownsBiz(state: GameState, regionId: RegionId, bizId: string): bo
 export const offshoreActive = (s: GameState) => s.regions.verano.vars.offshore && ownsBiz(s, 'verano', 'offshore');
 
 // ── Red Mesa: permits & fuel index ────────────────────────────────────────────
-export function permitWait(state: GameState): number {
-  const L = laws(state, 'redmesa');
+export const PERMIT_BASE = 90;
+export const PERMIT_PER_REG = 240;
+/** Tier-1 (street) businesses wait this fraction of the full permit time. */
+export const PERMIT_TIER1 = 0.4;
+/** Seconds a new Red Mesa business sits idle waiting for its permit. Everything needs one —
+ *  except the Fuel Pump (the territory runs on gas); street-level tier-1 trades wait less. */
+export function permitWait(state: GameState, bizId?: string): number {
   const favour = state.regions.redmesa.factions.circle?.standing ?? 0;
-  return Math.round((60 + 180 * L.regulation) * (favour >= 50 ? 0.5 : 1));
+  return permitSeconds(laws(state, 'redmesa').regulation, bizId) * (favour >= 50 ? 0.5 : 1);
+}
+/** Permit time for a regulation level (pure; also used for the region pitch). */
+export function permitSeconds(regulation: number, bizId?: string): number {
+  if (bizId === 'fuelpump') return 0;
+  const tierMult = bizId && BIZ[bizId]?.tier === 1 ? PERMIT_TIER1 : 1;
+  return Math.round((PERMIT_BASE + PERMIT_PER_REG * regulation) * tierMult);
 }
 
 // ── Ironhold: union mood & strikes ────────────────────────────────────────────
+/** Below this union mood a strike can break out; it stops your industry & logistics. */
+export const STRIKE_MOOD = 30;
+export const STRIKE_SECS = 90;
 export const strikeActive = (s: GameState, T = s.t) => s.regions.ironhold.vars.strikeUntil > T;
 
 /** Multiplier a region's signature mechanic applies to a business category for an owner.
@@ -58,15 +89,19 @@ export function mechanicMult(state: GameState, regionId: RegionId, cat: Category
       return cat === 'hospitality' ? tourismMult(T) : 1;
     case 'ironhold':
       return owner === 'player' && (cat === 'industry' || cat === 'logistics') && strikeActive(state, T) ? 0 : 1;
+    case 'solenne':
+      return owner === 'player' && cat === 'logistics' ? portMult(state) : 1;
     default:
       return 1;
   }
 }
 
 /** Effective income-tax rate; the Verano offshore shelter cuts the player's tax elsewhere. */
+/** The Verano offshore shelter multiplies your income tax outside Verano by this. */
+export const OFFSHORE_TAX_MULT = 0.45;
 export function taxRate(state: GameState, regionId: RegionId, owner: OwnerId): number {
   const base = laws(state, regionId).incomeTax;
-  return owner === 'player' && regionId !== 'verano' && offshoreActive(state) ? base * 0.45 : base;
+  return owner === 'player' && regionId !== 'verano' && offshoreActive(state) ? base * OFFSHORE_TAX_MULT : base;
 }
 
 function playerIndustryCount(state: GameState): number {
@@ -110,10 +145,10 @@ export function mechanicsTick(state: GameState, dt: number): void {
     state.rev++;
     notify(state, 'The Ironhold strike is over. Mood recovers a little.', 'info');
   }
-  if (n > 0 && !strikeActive(state) && ih.unionMood < 30 && next(state) < Math.min(1, dt * 0.025)) {
-    ih.strikeUntil = state.t + 90;
+  if (n > 0 && !strikeActive(state) && ih.unionMood < STRIKE_MOOD && next(state) < Math.min(1, dt * 0.025)) {
+    ih.strikeUntil = state.t + STRIKE_SECS;
     state.rev++;
-    notify(state, 'STRIKE! The Ironhold union walked out. Your industry & logistics there earn nothing for 90 s.', 'bad');
+    notify(state, `STRIKE! The Ironhold union walked out. Your industry & logistics there earn nothing for ${STRIKE_SECS} s.`, 'bad');
   }
 
 // Verano offshore shelter keeps heat simmering.

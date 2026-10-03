@@ -1,7 +1,7 @@
 // World: owns the renderer and the 3D city of the current region. Reads sim state, never writes it.
 import * as THREE from 'three';
 import type { LotState, RegionId } from '../core/types';
-import { getCity, type CityLayout } from '../core/city';
+import { getCity, type CityLayout, type LotDef } from '../core/city';
 import { DAY } from '../core/constants';
 import { makeRng } from '../core/rng';
 import { THEMES, type Theme } from './themes';
@@ -15,7 +15,12 @@ import { Player } from './player';
 import { CameraRig } from './camera';
 import { AdaptiveResolution, QUALITY, type QualityName, type QualityPreset } from './quality';
 
-export interface WorldStats { calls: number; triangles: number; dpr: number; fps: number; quality: QualityName; }
+export interface WorldStats { calls: number; triangles: number; dpr: number; fps: number; quality: QualityName; rebuilds: number; rebuildMs: number; chunks: number; }
+/** The city is merged per chunk of 2×2 blocks, so a lot change rebuilds ~1/9–1/6 of the city. */
+interface Chunk { defs: LotDef[]; meshes: THREE.Mesh[]; chimneys: THREE.Vector3[]; sig: string }
+const CHUNK_BLOCKS = 2;
+/** At most this many dirty chunks are rebuilt per sync (the rest wait for the next one). */
+const MAX_CHUNKS_PER_SYNC = 2;
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const SIDE_VEC: Record<string, [number, number]> = { s: [0, 1], n: [0, -1], e: [1, 0], w: [-1, 0] };
 
@@ -35,8 +40,10 @@ export class World {
   private scenery: SceneryHandles | null = null;
   private city = new THREE.Group();
   private visuals = new Map<string, LotVisual>();
-  private geoSig = '';
+  private chunks: Chunk[] = [];
   private ownerSig = '';
+  /** Rebuild accounting (exposed in stats() for tests and the settings panel). */
+  readonly perf = { rebuilds: 0, lastMs: 0, maxMs: 0 };
   private markers = new Markers(160);
   private traffic: Traffic | null = null;
   private peds: Pedestrians | null = null;
@@ -146,7 +153,8 @@ export class World {
     if (this.quality.peds) { this.peds = new Pedestrians(this.layout, this.quality.peds, r); this.scene.add(this.peds.bodies, this.peds.heads); }
     this.weather = new Weather(theme.weather, this.quality.weather, r);
     this.scene.add(this.weather.object);
-    this.geoSig = this.ownerSig = '';
+    this.ownerSig = '';
+    this.makeChunks();
     this.rebuildCity(lots);
     const center = new THREE.Vector3(0, 0, 0);
     if (mode === 'showcase') {
@@ -173,32 +181,72 @@ export class World {
     this.player.heading = Math.atan2(-fx, -fz);
   }
 
-  private rebuildCity(lots: Record<string, LotState> | null): void {
-    for (const m of [...this.city.children]) { this.city.remove(m); (m as THREE.Mesh).geometry?.dispose(); }
-    if (this.smoke) { this.scene.remove(this.smoke.mesh); this.smoke.dispose(); }
-    const gb = new GeoBuilder();
-    const out = buildLots(gb, this.layout!, lots, this.theme!);
-    for (const m of gb.build(this.mats!)) this.city.add(m);
-    this.visuals = out.lots;
-    this.smoke = new Smoke(out.chimneys, makeRng(5));
-    this.scene.add(this.smoke.mesh);
+  private makeChunks(): void {
+    const L = this.layout!;
+    const nx = Math.ceil(L.cols / CHUNK_BLOCKS);
+    const n = nx * Math.ceil(L.rows / CHUNK_BLOCKS);
+    this.chunks = Array.from({ length: n }, () => ({ defs: [], meshes: [], chimneys: [], sig: '' }));
+    for (const def of L.lots) {
+      const [i, j] = def.block;
+      this.chunks[Math.floor(i / CHUNK_BLOCKS) + nx * Math.floor(j / CHUNK_BLOCKS)].defs.push(def);
+    }
+    this.chunks = this.chunks.filter((c) => c.defs.length);
   }
 
-  /** Apply sim state: rebuild geometry only when a lot's look changed; markers when owners changed. */
-  syncLots(lots: Record<string, LotState>, ownerColor: (owner: string) => number | null, cashReady: Set<string>, permits: Set<string>): void {
-    if (!this.layout) return;
-    let g = '', o = '';
-    for (const def of this.layout.lots) {
-      const l = lots[def.id];
-      g += `${l.biz ?? '-'}${Math.floor(l.level / 10)}|`;
-      o += `${l.owner}|`;
+  /** What a lot looks like (geometry changes only when this changes). */
+  private static lotSig(l: LotState | undefined): string { return l ? `${l.biz ?? '-'}${Math.floor(l.level / 10)}` : 'x'; }
+  private chunkSig(c: Chunk, lots: Record<string, LotState> | null): string {
+    let s = '';
+    for (const d of c.defs) s += World.lotSig(lots?.[d.id]) + '|';
+    return s;
+  }
+
+  private buildChunk(c: Chunk, lots: Record<string, LotState> | null): void {
+    const t0 = performance.now();
+    for (const m of c.meshes) { this.city.remove(m); m.geometry.dispose(); }
+    const gb = new GeoBuilder();
+    const out = buildLots(gb, this.layout!, lots, this.theme!, c.defs);
+    c.meshes = gb.build(this.mats!);
+    for (const m of c.meshes) this.city.add(m);
+    for (const [id, v] of out.lots) this.visuals.set(id, v);
+    c.chimneys = out.chimneys;
+    c.sig = this.chunkSig(c, lots);
+    const ms = performance.now() - t0;
+    this.perf.rebuilds++; this.perf.lastMs = ms; this.perf.maxMs = Math.max(this.perf.maxMs, ms);
+  }
+
+  private updateSmoke(): void {
+    const all = this.chunks.flatMap((c) => c.chimneys);
+    if (!this.smoke) { this.smoke = new Smoke(all, makeRng(5)); this.scene.add(this.smoke.mesh); } else this.smoke.setSources(all);
+  }
+
+  /** Full build (region change). Normal play only rebuilds the chunks whose lots changed. */
+  private rebuildCity(lots: Record<string, LotState> | null): void {
+    this.visuals = new Map();
+    for (const c of this.chunks) this.buildChunk(c, lots);
+    this.updateSmoke();
+  }
+
+  /** Apply sim state: rebuild only chunks whose lots changed look (bounded per call); markers
+   *  when owners changed. Returns how many chunks were rebuilt. */
+  syncLots(lots: Record<string, LotState>, ownerColor: (owner: string) => number | null, cashReady: Set<string>, permits: Set<string>): number {
+    if (!this.layout) return 0;
+    let rebuilt = 0;
+    for (const c of this.chunks) {
+      if (rebuilt >= MAX_CHUNKS_PER_SYNC) break;
+      if (this.chunkSig(c, lots) === c.sig) continue;
+      this.buildChunk(c, lots);
+      rebuilt++;
     }
-    if (g !== this.geoSig) { this.rebuildCity(lots); this.geoSig = g; this.ownerSig = ''; }
+    if (rebuilt) { this.updateSmoke(); this.ownerSig = ''; }
+    let o = '';
+    for (const def of this.layout.lots) o += `${lots[def.id].owner}|`;
     if (o !== this.ownerSig) { this.markers.rebuild(this.layout, lots, this.visuals, ownerColor); this.ownerSig = o; }
     const cash: THREE.Vector3[] = [], hold: THREE.Vector3[] = [];
     for (const id of cashReady) { const v = this.visuals.get(id); if (v) cash.push(v.center); }
     for (const id of permits) { const v = this.visuals.get(id); if (v) hold.push(v.center); }
     this.markers.setStatus(cash, hold);
+    return rebuilt;
   }
 
   select(lotId: string | null): void {
@@ -357,7 +405,7 @@ export class World {
   }
 
   stats(): WorldStats {
-    return { ...this.lastStats, dpr: this.renderer.getPixelRatio(), fps: this.fps.value, quality: this.quality.name };
+    return { ...this.lastStats, dpr: this.renderer.getPixelRatio(), fps: this.fps.value, quality: this.quality.name, rebuilds: this.perf.rebuilds, rebuildMs: this.perf.lastMs, chunks: this.chunks.length };
   }
 
   dispose(): void {

@@ -26,6 +26,12 @@ for (const region of REGIONS) {
     expect(day.calls).toBeLessThanOrEqual(220);
     expect(day.triangles).toBeLessThanOrEqual(500_000);
     await page.screenshot({ path: `e2e/__shots__/world-${region}-day.png` });
+    // One lot changing must not rebuild the whole city (critic #5): exactly one chunk, far cheaper.
+    const probe = await page.evaluate(() => (window as unknown as { __BR: BR }).__BR.rebuildProbe()) as { chunksRebuilt: number; ms: number; fullMs: number; chunks: number };
+    console.log(`[rebuild] ${region}: 1 lot -> ${probe.chunksRebuilt}/${probe.chunks} chunks in ${probe.ms.toFixed(1)} ms (full city ${probe.fullMs.toFixed(1)} ms)`);
+    expect(probe.chunks).toBeGreaterThanOrEqual(4);
+    expect(probe.chunksRebuilt).toBe(1);
+    expect(probe.ms).toBeLessThan(probe.fullMs * 0.6);
     // Zoomed-out establishing view
     await page.evaluate(() => { const r = (window as unknown as { __BR: BR }).__BR.session.world.rig; r.dist = 110; r.polar = 0.9; });
     await page.waitForTimeout(1200);

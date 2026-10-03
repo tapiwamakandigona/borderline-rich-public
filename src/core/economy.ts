@@ -12,7 +12,7 @@ const GROWTH = BAL.upgradeGrowth;
 /** Upkeep added to every player business once the empire passes BAL.overheadFree businesses. */
 export const empireOverhead = (owned: number) => Math.min(BAL.overheadCap, BAL.overheadPerBiz * Math.max(0, owned - BAL.overheadFree));
 /** Price level of customers: cheap regions also earn less per sale (see BAL.incomeElasticity). */
-export const incomeIndex = (regionId: RegionId) => costIndex(regionId) ** BAL.incomeElasticity;
+export const incomeIndex = (regionId: RegionId) => costIndex(regionId) ** BAL.incomeElasticity * (REGION[regionId].economy.spend ?? 1);
 export const demandMult = (regionId: RegionId, cat: BusinessDef['category']) => spread(REGION[regionId].economy.demand[cat], BAL.demandSpread);
 export function fitMult(regionId: RegionId, district: string, cat: BusinessDef['category']): number {
   const d = REGION[regionId].districts.find((x) => x.id === district);
@@ -99,60 +99,85 @@ function buffMult(state: GameState, T: number, regionId: RegionId, cat: string, 
   return m;
 }
 
-function computeRegion(state: GameState, regionId: RegionId, out: Derived, T: number): void {
-  const R = REGION[regionId];
-  const city = getCity(regionId);
-  const L = laws(state, regionId);
+type Counts = Map<string, Map<OwnerId, number>>;
+/** District × category → owner → count, for competition and chain synergy. `hypo` swaps one lot. */
+function regionCounts(state: GameState, regionId: RegionId, hypo?: { lotId: string; ls: LotState }): Counts {
   const rs = state.regions[regionId];
-  // District × category → owner → count, for competition and chain synergy.
-  const counts = new Map<string, Map<OwnerId, number>>();
-  for (const def of city.lots) {
-    const ls = rs.lots[def.id];
+  const counts: Counts = new Map();
+  for (const def of getCity(regionId).lots) {
+    const ls = hypo && hypo.lotId === def.id ? hypo.ls : rs.lots[def.id];
     if (!ls.biz) continue;
     const key = def.district + '|' + BIZ[ls.biz].category;
     let m = counts.get(key);
     if (!m) counts.set(key, (m = new Map()));
     m.set(ls.owner, (m.get(ls.owner) ?? 0) + 1);
   }
+  return counts;
+}
+
+/** THE income formula for one business (the sim and every UI estimate use this). */
+function lotIncome(state: GameState, regionId: RegionId, def: LotDef, ls: LotState, counts: Counts, overhead: number, T: number): LotIncome {
+  const R = REGION[regionId];
+  const L = laws(state, regionId);
+  const rs = state.regions[regionId];
+  const b = BIZ[ls.biz!];
+  const cat = b.category;
+  const m = counts.get(def.district + '|' + cat)!;
+  let total = 0;
+  m.forEach((v) => (total += v));
+  const own = m.get(ls.owner) ?? 0;
+  const competition = 1 / (1 + 0.12 * (total - own));
+  const synergy = ls.owner === 'npc' ? 1 : 1 + Math.min(0.25, 0.05 * (own - 1));
+  let gross =
+    b.baseIncome * ls.level * milestoneMult(ls.level) * incomeIndex(regionId) *
+    demandMult(regionId, cat) * fitMult(regionId, def.district, cat) * (L.categoryMods[cat] ?? 1) *
+    (b.tier <= 2 ? L.smallBizRelief : 1) * competition * synergy *
+    mechanicMult(state, regionId, cat, ls.owner, T) * buffMult(state, T, regionId, cat, def.district, ls.owner);
+  if (ls.owner === 'player') {
+    gross *= 1 + state.rep / 500;
+    if (state.entitlements.doubleIncome) gross *= 2;
+  }
+  const upkeep = 0.12 * R.economy.wageIndex * L.minWage * (ls.owner === 'player' && regionId === 'ironhold' ? 1 + rs.vars.wageDeal : 1) +
+    (ls.owner === 'player' ? overhead : 0);
+  let net = gross * Math.max(0.1, 1 - taxRate(state, regionId, ls.owner) - upkeep);
+  if (ls.owner === 'player' && regionId === 'neonvale' && rs.vars.vcShare > 0) net *= 1 - rs.vars.vcShare;
+  let active = true;
+  let reason: string | undefined;
+  if (ls.permitUntil > T) { active = false; reason = 'Awaiting permit'; }
+  else if (ls.frozenUntil > T) { active = false; reason = 'Shut down'; }
+  else if (gross <= 0) { active = false; reason = 'On strike'; }
+  if (!active) { gross = 0; net = 0; }
+  return { gross, net, active, reason };
+}
+
+function computeRegion(state: GameState, regionId: RegionId, out: Derived, T: number): void {
+  const rs = state.regions[regionId];
+  const counts = regionCounts(state, regionId);
   const res: Record<string, LotIncome> = {};
   let playerSum = 0;
-  for (const def of city.lots) {
+  for (const def of getCity(regionId).lots) {
     const ls = rs.lots[def.id];
     if (!ls.biz) continue;
-    const b = BIZ[ls.biz];
-    const cat = b.category;
-    const m = counts.get(def.district + '|' + cat)!;
-    let total = 0;
-    m.forEach((v) => (total += v));
-    const own = m.get(ls.owner) ?? 0;
-    const competition = 1 / (1 + 0.12 * (total - own));
-    const synergy = ls.owner === 'npc' ? 1 : 1 + Math.min(0.25, 0.05 * (own - 1));
-    let gross =
-      b.baseIncome * ls.level * milestoneMult(ls.level) * incomeIndex(regionId) *
-      demandMult(regionId, cat) * fitMult(regionId, def.district, cat) * (L.categoryMods[cat] ?? 1) *
-      (b.tier <= 2 ? L.smallBizRelief : 1) * competition * synergy *
-      mechanicMult(state, regionId, cat, ls.owner, T) * buffMult(state, T, regionId, cat, def.district, ls.owner);
-    if (ls.owner === 'player') {
-      gross *= 1 + state.rep / 500;
-      if (state.entitlements.doubleIncome) gross *= 2;
-    }
-    const upkeep = 0.12 * R.economy.wageIndex * L.minWage * (ls.owner === 'player' && regionId === 'ironhold' ? 1 + rs.vars.wageDeal : 1) +
-      (ls.owner === 'player' ? out.overhead : 0);
-    let net = gross * Math.max(0.1, 1 - taxRate(state, regionId, ls.owner) - upkeep);
-    if (ls.owner === 'player' && regionId === 'neonvale' && rs.vars.vcShare > 0) net *= 1 - rs.vars.vcShare;
-    let active = true;
-    let reason: string | undefined;
-    if (ls.permitUntil > T) { active = false; reason = 'Awaiting permit'; }
-    else if (ls.frozenUntil > T) { active = false; reason = 'Shut down'; }
-    else if (gross <= 0) { active = false; reason = 'On strike'; }
-    if (!active) { gross = 0; net = 0; }
-    res[def.id] = { gross, net, active, reason };
-    if (ls.owner === 'player') playerSum += net;
-    else if (ls.owner !== 'npc') out.rivals[ls.owner] = (out.rivals[ls.owner] ?? 0) + net;
+    const r = (res[def.id] = lotIncome(state, regionId, def, ls, counts, out.overhead, T));
+    if (ls.owner === 'player') playerSum += r.net;
+    else if (ls.owner !== 'npc') out.rivals[ls.owner] = (out.rivals[ls.owner] ?? 0) + r.net;
   }
   out.lots[regionId] = res;
   out.playerByRegion[regionId] = playerSum;
   out.player += playerSum;
+}
+
+/** What `bizId` at `level` on this lot would earn per second for YOU, right now: the sim's own
+ *  formula with the lot swapped in (tax, upkeep, empire overhead, competition, chain synergy,
+ *  laws, region mechanic, buffs, rep). Ignores a permit wait (shown separately). Critic #4. */
+export function projectIncome(state: GameState, regionId: RegionId, lotId: string, bizId: string, level = 1): number {
+  const def = getCity(regionId).lotById[lotId];
+  const cur = state.regions[regionId].lots[lotId];
+  const hypo: LotState = { ...cur, owner: 'player', biz: bizId, level, permitUntil: 0, frozenUntil: 0 };
+  let owned = 0;
+  for (const id of REGION_IDS) for (const l of Object.values(state.regions[id].lots)) if (l.owner === 'player' && l.biz) owned++;
+  if (!(cur.owner === 'player' && cur.biz)) owned++;
+  return lotIncome(state, regionId, def, hypo, regionCounts(state, regionId, { lotId, ls: hypo }), empireOverhead(owned), Math.floor(state.t)).net;
 }
 
 let cache: { state: GameState; d: Derived } | null = null;

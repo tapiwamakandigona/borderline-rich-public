@@ -29,8 +29,13 @@ test('a full scripted session', async ({ page }) => {
   await expect(page.locator('.rankup')).toHaveCount(0); // celebrations never cover the lot card
   await page.waitForTimeout(400); // let the card's rise animation finish before the screenshot
   await page.screenshot({ path: 'e2e/__shots__/ui-vacant.png' });
-  await page.locator('[data-testid="build-cart"]').click();
+  // The card's estimate is the sim's own formula: check it against what the business really earns.
+  const est = await page.locator('[data-testid="est-fuelpump"]').textContent();
+  await page.locator('[data-testid="build-fuelpump"]').click(); // Red Mesa's permit-free starter
   await expect(page.locator('[data-testid="lot-card"]')).toHaveAttribute('data-owner', 'player');
+  const real = await ev<number>(page, `b.state() && (() => { const st = b.state(); return st.regions.redmesa.lots['${lot}'].permitUntil; })()`);
+  expect(real).toBe(0); // no permit queue for a Fuel Pump
+  expect(est).toMatch(/≈ \$/);
   await page.locator('[data-testid="upgrade-1"]').click();
   expect(await ev<number>(page, `b.state().regions.redmesa.lots['${lot}'].level`)).toBe(2);
   await ev(page, 'b.advance(30)');

@@ -7,7 +7,7 @@ import { money, perSec, duration } from '../core/format';
 import { RANKS, GOALS } from '../core/data/progression';
 import { REGION } from '../core/data/regions';
 import { DAY } from '../core/constants';
-import { SEASONS, SEASON_MULT, seasonIndex, highSeason, TOURISM_HIGH, TOURISM_LOW, strikeActive } from '../core/mechanics';
+import { SEASONS, SEASON_MULT, seasonIndex, highSeason, TOURISM_HIGH, TOURISM_LOW, strikeActive, PORT_MAX_SHIPS, portMult, portShipments } from '../core/mechanics';
 import { comboMult, hustlePerTap, collectAll } from '../core/actions';
 import { JUICE } from './juice';
 import type { GameState } from '../core/types';
@@ -23,7 +23,10 @@ export function regionPulse(s: GameState): { label: string; tone: 'gold' | 'mint
   const rid = s.currentRegion;
   const v = s.regions;
   switch (rid) {
-    case 'solenne': return { label: 'Free Port · 0 % import tariff', tone: 'mint' };
+    case 'solenne': {
+      const n = Math.min(PORT_MAX_SHIPS, portShipments(s));
+      return { label: n ? `Free Port · ${n} ship${n > 1 ? 's' : ''} moving · logistics ×${portMult(s).toFixed(1)}` : 'Free Port · ship cargo to boost the docks', tone: n ? 'mint' : 'muted' };
+    }
     case 'redmesa': {
       const f = v.redmesa.vars.fuelIndex;
       return { label: `Fuel index ×${f.toFixed(2)}`, tone: f >= 1.2 ? 'mint' : f <= 0.8 ? 'red' : 'muted' };

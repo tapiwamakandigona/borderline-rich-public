@@ -24,7 +24,7 @@ function Signature({ st }: { st: GameState }) {
       const pending = Object.entries(st.regions.redmesa.lots).filter(([, l]) => l.owner === 'player' && l.permitUntil > st.t);
       body = (
         <>
-          <p class="muted">New tier-2+ businesses wait ~{duration(permitWait(st))} for a permit. Standing with the Governor's Circle halves it; an envelope skips it (+8 heat).</p>
+          <p class="muted">New businesses wait ~{duration(permitWait(st))} for a permit (street stalls ~{duration(permitWait(st, 'cart'))}, Fuel Pumps none). Standing with the Governor's Circle halves it; an envelope skips it (+8 heat).</p>
           <p>Fuel index <b class="gold">×{st.regions.redmesa.vars.fuelIndex.toFixed(2)}</b> — energy businesses ride it.</p>
           {pending.map(([id, l]) => (
             <div key={id} class="permit"><span>{BIZ[l.biz!].name} · {duration(l.permitUntil - st.t)}</span>

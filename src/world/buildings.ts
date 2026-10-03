@@ -233,9 +233,134 @@ function warehouse(ctx: Ctx, tier: number, blue = false): number {
   return H + 1.7;
 }
 
+// ── Region starter stalls: each region's first business has its own silhouette ──────────────
+function crateStall(ctx: Ctx): number {
+  const { gb, r } = ctx;
+  const wood = [0xb08a5a, 0x9c7748, 0xc49a63, 0x8a6a42];
+  // stacked crates
+  const stacks: [number, number, number][] = [[-2.4, -0.6, 3], [-1.0, -1.2, 2], [0.4, -1.4, 1], [-2.3, 1.0, 1]];
+  for (const [x, z, n] of stacks) for (let k = 0; k < n; k++) {
+    const s = 1.1 + next(r) * 0.25;
+    gb.box('plain', s, s, s, x + (next(r) - 0.5) * 0.2, 0.1 + k * 1.15, z, pick(r, wood), { ry: (next(r) - 0.5) * 0.3 });
+    gb.box('plain', s + 0.04, 0.12, s + 0.04, x, 0.1 + k * 1.15 + s * 0.5, z, 0x6e5232);
+  }
+  // A-frame hoist with a hanging crate
+  for (const sx of [-1, 1]) gb.box('plain', 0.22, 4.6, 0.22, 2.0 + sx * 0.9, 0.1, -0.6, 0x5a4632, { rz: sx * 0.12 });
+  gb.box('plain', 2.4, 0.22, 0.22, 2.0, 4.55, -0.6, 0x5a4632);
+  gb.cyl('plain', 0.03, 0.03, 1.6, 2.0, 2.95, -0.6, 0x333333, 4);
+  gb.box('plain', 1.0, 0.9, 1.0, 2.0, 2.05, -0.6, 0xe07a1f);
+  // counter + striped awning
+  gb.box('plain', 3.0, 1.0, 0.9, 0.6, 0.1, 1.6, 0x8a6a42);
+  for (let i = 0; i < 5; i++) gb.box('plain', 0.62, 0.12, 1.6, -0.64 + i * 0.62, 2.6, 1.45, i % 2 ? 0xf4efe6 : 0xe07a1f, { rx: 0.18 });
+  for (const sx of [-1, 1]) gb.cyl('plain', 0.06, 0.06, 2.5, 0.6 + sx * 1.5, 0.1, 2.15, 0x777777, 5);
+  return 5.0;
+}
+
+function fuelPump(ctx: Ctx): number {
+  const { gb, theme } = ctx;
+  gb.box('plain', 7.0, 0.18, 5.2, 0, 0.02, 0.4, 0xb7aa96);
+  for (const sx of [-1, 1]) gb.box('plain', 0.3, 3.8, 0.3, sx * 2.8, 0.2, 0.6, 0xe9e2d4);
+  gb.box('plain', 6.6, 0.45, 3.0, 0, 4.0, 0.6, 0xf4efe6);
+  gb.box('plain', 6.65, 0.18, 3.05, 0, 4.0, 0.6, 0xe8b02a);
+  for (const sx of [-1, 1]) {
+    gb.box('plain', 0.8, 1.7, 0.6, sx * 1.2, 0.2, 0.6, 0xd9483b);
+    gb.cyl('plain', 0.42, 0.42, 0.6, sx * 1.2, 1.9, 0.9, 0xf4efe6, 10, Math.PI / 2);
+    gb.box(theme.neon ? 'glow' : 'plain', 0.5, 0.35, 0.05, sx * 1.2, 1.25, 0.92, 0xfff3c4);
+  }
+  for (let i = 0; i < 3; i++) gb.cyl('plain', 0.42, 0.42, 1.2, -3.0 + i * 0.95, 0.2, -1.9, i === 1 ? 0x2a6fa8 : 0xb33a2a, 10);
+  gb.cyl('plain', 0.13, 0.13, 7.2, 3.3, 0.2, 2.4, 0x666666, 6);
+  gb.cyl('plain', 1.15, 1.15, 0.25, 3.3, 7.0, 2.4, 0xe8b02a, 16, Math.PI / 2);
+  gb.cyl(theme.neon ? 'glow' : 'plain', 0.85, 0.85, 0.28, 3.3, 7.0, 2.4, 0xd9483b, 16, Math.PI / 2);
+  return 8.2;
+}
+
+function repairStall(ctx: Ctx): number {
+  const { gb, theme } = ctx;
+  gb.box('upper', 3.2, 2.9, 2.6, 0, 0.1, -0.4, 0x2b2f3a, { tile: TILE });
+  gb.box('plain', 3.6, 0.25, 3.0, 0, 3.0, -0.4, 0x14161b);
+  gb.box('plain', 3.0, 1.05, 0.7, 0, 0.1, 1.2, 0x3a3f4c);
+  gb.box(theme.neon ? 'glow' : 'plain', 3.05, 0.08, 0.72, 0, 1.15, 1.2, 0x2bb7d9);
+  // giant phone sign
+  gb.box('plain', 1.9, 3.3, 0.35, 0, 3.25, -0.6, 0x14161b);
+  gb.box('glow', 1.55, 2.7, 0.08, 0, 3.55, -0.4, 0x2bb7d9);
+  gb.box('glow', 0.7, 0.18, 0.1, 0, 3.75, -0.38, 0xf4efe6);
+  gb.cyl('glow', 0.18, 0.18, 0.1, 0, 3.32, -0.36, 0xff3e9a, 10, Math.PI / 2);
+  // stool + parasol
+  gb.cyl('plain', 0.3, 0.3, 0.75, 2.4, 0.1, 1.9, 0x2bb7d9, 10);
+  gb.cyl('plain', 0.05, 0.05, 2.6, -2.4, 0.1, 1.6, 0x999999, 5);
+  gb.add('plain', new THREE.ConeGeometry(1.4, 0.6, 8), 0xff3e9a, -2.4, 2.8, 1.6);
+  return 6.9;
+}
+
+function eggStand(ctx: Ctx): number {
+  const { gb, r } = ctx;
+  gb.box('plain', 3.6, 1.0, 1.4, 0, 0.1, 1.2, 0x9a6a42);
+  for (const sx of [-1, 1]) gb.box('plain', 0.18, 2.5, 0.18, sx * 1.7, 0.1, 0.6, 0x6b4a35);
+  gb.gable('plain', 4.2, 1.0, 2.2, 0, 2.6, 0.9, 0x5f9a3a);
+  for (let i = 0; i < 4; i++) {
+    gb.box('plain', 0.75, 0.22, 0.55, -1.2 + i * 0.8, 1.1, 1.2, 0xe8dcc4);
+    for (let k = 0; k < 3; k++) gb.sphere('plain', 0.12, -1.42 + i * 0.8 + k * 0.22, 1.36, 1.2, next(r) < 0.5 ? 0xf6efe0 : 0xd9b48a, false, 1.25);
+  }
+  // little coop
+  gb.box('plain', 2.0, 1.3, 1.6, -2.2, 0.5, -1.8, 0xa63a2b);
+  gb.gable('plain', 2.3, 0.9, 1.8, -2.2, 1.8, -1.8, 0xf4efe6);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gb.box('plain', 0.15, 0.5, 0.15, -2.2 + sx * 0.85, 0, -1.8 + sz * 0.65, 0x6b4a35);
+  // beehives + hay
+  for (let k = 0; k < 3; k++) gb.box('plain', 0.8, 0.45, 0.8, 2.3, 0.1 + k * 0.47, -1.6, k % 2 ? 0xf2c14e : 0xe8b02a);
+  gb.box('plain', 0.95, 0.12, 0.95, 2.3, 1.52, -1.6, 0xf4efe6);
+  gb.cyl('plain', 0.7, 0.7, 1.4, 1.0, 0.1, -2.2, 0xe2c26a, 12, Math.PI / 2);
+  return 3.8;
+}
+
+function beachShack(ctx: Ctx): number {
+  const { gb, r } = ctx;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gb.cyl('plain', 0.14, 0.14, 0.7, sx * 1.6, 0, -0.6 + sz * 1.3, 0x8a6a42, 6);
+  gb.box('plain', 3.8, 0.2, 3.2, 0, 0.7, -0.6, 0xc49a63);
+  gb.box('plain', 3.4, 2.1, 2.6, 0, 0.9, -0.8, 0xf2d7a6);
+  gb.box('plain', 2.2, 0.9, 0.12, 0, 1.8, 0.52, 0x5a3f2a);
+  gb.box('plain', 3.6, 0.9, 0.7, 0, 0.9, 1.05, 0x2ec4c9);
+  gb.add('plain', new THREE.ConeGeometry(3.0, 1.9, 9), 0xd8b26a, 0, 3.95, -0.7);
+  gb.add('plain', new THREE.ConeGeometry(3.15, 0.35, 9), 0xc79a55, 0, 3.1, -0.7);
+  // surfboards
+  const boards = [0xff6b6b, 0xffd166, 0x2ec4c9];
+  boards.forEach((c, i) => gb.add('plain', new THREE.CapsuleGeometry(0.28, 2.0, 4, 8), c, 2.5 + i * 0.55, 1.4, -1.3, 0.18, 0, -0.12 + i * 0.05, 1, 1, 0.25));
+  // deck chairs + parasol
+  for (let i = 0; i < 2; i++) {
+    const x = -2.2 + i * 1.6;
+    gb.box('plain', 0.8, 0.12, 1.8, x, 0.35, 2.6, i ? 0xffffff : 0xff6b6b, { rx: -0.25 });
+  }
+  gb.cyl('plain', 0.05, 0.05, 2.4, -1.4, 0, 3.3, 0xdddddd, 5);
+  gb.add('plain', new THREE.ConeGeometry(1.5, 0.55, 10), next(r) < 0.5 ? 0xffd166 : 0xff6b6b, -1.4, 2.5, 3.3);
+  return 4.9;
+}
+
+function scrapForge(ctx: Ctx): number {
+  const { gb, chimneys } = ctx;
+  gb.box('upper', 4.2, 3.0, 3.2, -0.6, 0.1, -0.8, 0x8a3b2c, { tile: TILE });
+  gb.box('plain', 4.6, 0.35, 3.6, -0.6, 3.1, -0.8, 0x4a4f57);
+  gb.box('glow', 1.3, 1.0, 0.1, -0.6, 0.7, 0.82, 0xff8a2a);
+  gb.box('plain', 1.7, 0.25, 0.3, -0.6, 1.75, 0.82, 0x2f2f2f);
+  gb.cyl('plain', 0.5, 0.6, 5.5, 0.9, 3.4, -1.6, 0x6e3226, 10);
+  gb.cyl('plain', 0.62, 0.62, 0.3, 0.9, 8.9, -1.6, 0x2f2f2f, 10);
+  chimneys.push(toWorld(ctx, 0.9, 9.3, -1.6));
+  // anvil
+  gb.box('plain', 0.5, 0.7, 0.5, 2.2, 0.1, 1.4, 0x2f2f2f);
+  gb.box('plain', 1.1, 0.35, 0.5, 2.2, 0.8, 1.4, 0x3a3a3a);
+  // scrap pile
+  const scrap = [0x5c6770, 0x7a8088, 0x4a4f57, 0x8a5a3c];
+  for (let i = 0; i < 7; i++) gb.box('plain', 0.5 + (i % 3) * 0.35, 0.25 + (i % 2) * 0.3, 0.4 + (i % 4) * 0.2, 2.4 - (i % 3) * 0.5, 0.1 + Math.floor(i / 3) * 0.35, -1.6 + (i % 2) * 0.6, scrap[i % 4], { ry: i * 0.7, rz: (i % 3 - 1) * 0.2 });
+  return 9.4;
+}
+
+const STARTER_MODEL: Record<string, (ctx: Ctx) => number> = {
+  cratestall: crateStall, fuelpump: fuelPump, repairstall: repairStall, eggstand: eggStand, beachshack: beachShack, scrapforge: scrapForge,
+};
+
 function stall(ctx: Ctx, bizId: string): number {
   const { gb, theme, r } = ctx;
   const accent = CATEGORY_ACCENT[BIZ[bizId].category];
+  const starter = STARTER_MODEL[bizId];
+  if (starter) return starter(ctx);
   if (bizId === 'kiosk') {
     gb.box('upper', 3.4, 3.0, 3.0, 0, 0.1, 0, pick(r, theme.walls), { tile: TILE });
     gb.box('plain', 4.2, 0.3, 3.8, 0, 3.1, 0, accent);
@@ -385,9 +510,9 @@ function business(ctx: Ctx, ls: LotState, fp: LotDef['footprint']): number {
 }
 
 /** Builds every lot (buildings, vacant plots, civic buildings) into the GeoBuilder. */
-export function buildLots(gb: GeoBuilder, layout: CityLayout, lots: Record<string, LotState> | null, theme: Theme): BuildOutput {
+export function buildLots(gb: GeoBuilder, layout: CityLayout, lots: Record<string, LotState> | null, theme: Theme, only?: LotDef[]): BuildOutput {
   const out: BuildOutput = { lots: new Map(), chimneys: [] };
-  for (const def of layout.lots) {
+  for (const def of only ?? layout.lots) {
     const ls = lots?.[def.id];
     const r = makeRng(hash(def.id + (ls?.biz ?? 'v')));
     const ew = def.facing === 'e' || def.facing === 'w';

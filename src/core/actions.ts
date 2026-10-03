@@ -68,7 +68,8 @@ export function buyVacant(s: GameState, regionId: RegionId, lotId: string, bizId
   if (s.cash < cost) return fail(`Need ${money(cost)}.`);
   s.cash -= cost;
   Object.assign(ls, { owner: 'player', biz: bizId, level: 1, till: 0, manager: false, invested: cost, frozenUntil: 0 });
-  ls.permitUntil = regionId === 'redmesa' && b.tier >= 2 ? s.t + permitWait(s) : 0;
+  const wait = regionId === 'redmesa' ? permitWait(s, bizId) : 0;
+  ls.permitUntil = wait > 0 ? s.t + wait : 0;
   s.stats.bizBought++;
   s.rev++;
   notify(s, `You opened a ${b.name}${ls.permitUntil ? ' — awaiting its permit' : ''}.`, 'good');

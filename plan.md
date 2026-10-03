@@ -69,11 +69,11 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         asserts the HUD/joystick on screen + CI e2e robustness (camera settle, no random modals) [1, 13] (F14, F1)
   - [x] T10b Notifications: churn/rival toasts throttled into News, nothing over modals/lot card,
         rank-up banner placement, no duplicate toasts [7] (F15)
-  - [ ] T10c Regions play differently in the first 20 min: region starter businesses + signature
+  - [x] T10c Regions play differently in the first 20 min: region starter businesses + signature
         mechanics that touch tier-1, Solenne Free Port works for residents, region cards generated from
         the real numbers, difficulty stars match measured outcomes [2, 3, 11] (F3, F17)
-  - [ ] T10d Lot-card "≈ $/s" uses the real income function (tax, upkeep, competition, laws) [4] (F5)
-  - [ ] T10e Incremental city rebuild (per-chunk), no full-city rebuild on a lot change [5] (F13)
+  - [x] T10d Lot-card "≈ $/s" uses the real income function (tax, upkeep, competition, laws) [4] (F5)
+  - [x] T10e Incremental city rebuild (per-chunk), no full-city rebuild on a lot change [5] (F13)
   - [ ] T10f Visual pass: per-region landmark at spawn, camera framing, palm fronds, nights,
         Neon Vale windows, Verano sand; squash-and-stretch on upgrade + visible per-level growth [6, 12] (F13)
   - [ ] T10g Systems: wage deal has a real cost, every faction's standing does something,

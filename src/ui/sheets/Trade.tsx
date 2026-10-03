@@ -1,5 +1,6 @@
 // Trade: buy local goods, ship them across borders, and decide how honest the paperwork is.
 import { useState } from 'preact/hooks';
+import { FREE_PORT_CERT } from '../../core/mechanics';
 import { useSession, Sheet, Btn, Bar } from '../kit';
 import { Icon } from '../icons';
 import { GOODS, GOOD } from '../../core/data/businesses';
@@ -72,7 +73,7 @@ export function TradeSheet() {
           <div class="quote" data-testid="quote">
             <div><span>Goods</span><b>{money(q.value)}</b></div>
             <div><span>Export tariff</span><b>{money(q.exportTariff)}</b></div>
-            <div><span>Import tariff</span><b>{money(q.importTariff)}</b></div>
+            <div><span>Import tariff{from === 'solenne' && method === 'legal' ? ` (free-port certificate ×${FREE_PORT_CERT})` : ''}</span><b>{money(q.importTariff)}</b></div>
             <div><span>Freight</span><b>{money(q.fee)}</b></div>
             {q.bribe > 0 && <div><span>Bribe</span><b>{money(q.bribe)}</b></div>}
             <div class="total"><span>Pay now</span><b class="gold">{money(q.upfront)}</b></div>

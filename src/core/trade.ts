@@ -9,6 +9,7 @@ import { next } from './rng';
 import { anchorPrice } from './state';
 import { notify } from './notify';
 import { money } from './format';
+import { FREE_PORT_CERT } from './mechanics';
 
 export const METHODS: { id: ShipMethod; name: string; blurb: string }[] = [
   { id: 'legal', name: 'Legal', blurb: 'Pay every tariff. Sleep at night.' },
@@ -34,6 +35,8 @@ export function quote(state: GameState, good: GoodId, qty: number, to: RegionId,
   let exportTariff = exp, importTariff = imp, fee = value * 0.03, risk = 0, seconds = travelSeconds(from, to);
   const heat = state.heat;
   let msg: string | undefined;
+  // Free port: legal cargo leaving Solenne travels under a certificate that cuts the import tariff.
+  if (from === 'solenne' && method === 'legal') importTariff = imp * FREE_PORT_CERT;
   switch (method) {
     case 'transship':
       if (from === 'solenne' || to === 'solenne') msg = 'Transshipping only makes sense between two other regions.';

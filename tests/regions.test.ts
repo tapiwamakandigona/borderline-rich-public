@@ -9,14 +9,21 @@ import { DAY } from '../src/core/constants';
 import { quote } from '../src/core/trade';
 import { buyVacant, expeditePermit, toggleOffshore } from '../src/core/actions';
 import { advance } from '../src/core/sim';
-import { HYPE_MAX, HYPE_MIN, SEASON_MULT, TOURISM_HIGH, TOURISM_LOW, mechanicsTick } from '../src/core/mechanics';
+import {
+  FREE_PORT_CERT, FUEL_MAX, FUEL_MIN, HYPE_MAX, HYPE_MIN, PERMIT_TIER1, PORT_BONUS, PORT_MAX_SHIPS, SEASON_MULT, SIGNATURE_CATEGORY,
+  SOLENNE_START_SLOTS, TOURISM_HIGH, TOURISM_LOW, mechanicMult, mechanicsTick, permitWait,
+} from '../src/core/mechanics';
+import { BIZ, STARTER } from '../src/core/data/businesses';
+import { demandMult } from '../src/core/economy';
+import { regionFacts, xf } from '../src/core/pitch';
+import { ship } from '../src/core/trade';
 import type { GameState, RegionId } from '../src/core/types';
 import { THEMES } from '../src/world/themes';
 
 /** Put a player business directly on the first vacant lot that allows it. */
 function place(s: GameState, r: RegionId, bizId: string, level = 1): string {
   const city = getCity(r);
-  const lot = city.lots.find((d) => s.regions[r].lots[d.id].owner === 'vacant' && (d.footprint !== 'small' || ['cart', 'kiosk', 'farmstand', 'laundromat', 'guesthouse', 'gasstation', 'machineshop', 'cafe', 'freight', 'appstudio', 'offshore', 'boutique'].includes(bizId)))!;
+  const lot = city.lots.find((d) => s.regions[r].lots[d.id].owner === 'vacant' && (d.footprint !== 'small' || BIZ[bizId].tier <= 2))!;
   Object.assign(s.regions[r].lots[lot.id], { owner: 'player', biz: bizId, level, manager: true, permitUntil: 0 });
   s.rev++;
   return lot.id;
@@ -166,4 +173,78 @@ describe('F3 six genuinely different starting regions', () => {
     expect(trans.seconds).toBe(legal.seconds + 40);
     expect(REGION.solenne.government.permanentInfluence).toBe(true);
   });
+
+  it('every region opens with its own signature starter business, and the signature rule moves its income', () => {
+    for (const R of REGIONS) {
+      const b = BIZ[STARTER[R.id]];
+      expect(b.tier, R.id).toBe(1);
+      expect(b.category, R.id).toBe(SIGNATURE_CATEGORY[R.id]);
+      expect(b.regions, R.id).toEqual([R.id]);
+      // The starter's category is one the region's economy favours.
+      expect(demandMult(R.id, b.category), R.id).toBeGreaterThan(1.1);
+    }
+    expect(new Set(Object.values(STARTER)).size).toBe(6);
+    // Each mechanic reaches the starter (tier 1), not just late-game businesses.
+    const s = newGame('solenne', 1);
+    const m = (r: RegionId, set: () => void) => { set(); s.rev++; return mechanicMult(s, r, SIGNATURE_CATEGORY[r], 'player', Math.floor(s.t)); };
+    expect(m('neonvale', () => { s.regions.neonvale.vars.hype = HYPE_MAX; }) / m('neonvale', () => { s.regions.neonvale.vars.hype = HYPE_MIN; })).toBeGreaterThan(1.5);
+    expect(m('redmesa', () => { s.regions.redmesa.vars.fuelIndex = FUEL_MAX; }) / m('redmesa', () => { s.regions.redmesa.vars.fuelIndex = FUEL_MIN; })).toBeGreaterThan(1.5);
+    expect(m('amberfield', () => { s.t = 2 * DAY + 1; }) / m('amberfield', () => { s.t = 3 * DAY + 1; })).toBeGreaterThan(2);
+    expect(m('verano', () => { s.t = 1; }) / m('verano', () => { s.t = 2 * DAY + 1; })).toBeGreaterThan(1.5);
+    expect(m('ironhold', () => { s.regions.ironhold.vars.strikeUntil = s.t + 50; })).toBe(0);
+    s.regions.ironhold.vars.strikeUntil = 0;
+    expect(m('solenne', () => { s.shipments = []; })).toBe(1);
+  });
+
+  it('region cards: prose makes no numeric claims; every number comes from the live rules', () => {
+    for (const R of REGIONS) {
+      for (const text of [R.signature.summary, ...R.pros, ...R.cons]) expect(text, `${R.id}: "${text}"`).not.toMatch(/[×%]|\d/);
+      const facts = regionFacts(R.id);
+      expect(facts.length, R.id).toBeGreaterThanOrEqual(4);
+      const demand = facts.find((f) => f.label.endsWith('demand'))!;
+      expect(demand.value, R.id).toBe(xf(demandMult(R.id, SIGNATURE_CATEGORY[R.id])));
+      expect(facts[0].value, R.id).toBe(BIZ[STARTER[R.id]].name);
+    }
+    const val = (r: RegionId, label: string) => regionFacts(r).find((f) => f.label === label)!.value;
+    expect(val('neonvale', 'Hype on tech & services')).toBe(`${xf(HYPE_MIN)} – ${xf(HYPE_MAX)}`);
+    expect(val('amberfield', 'Farm seasons')).toBe(SEASON_MULT.map(xf).join(' → '));
+    expect(val('verano', 'Tourist seasons')).toBe(`${xf(TOURISM_HIGH)} high / ${xf(TOURISM_LOW)} low`);
+    expect(val('redmesa', 'Fuel index on energy')).toBe(`${xf(FUEL_MIN)} – ${xf(FUEL_MAX)}`);
+    const s = newGame('redmesa', 1);
+    expect(val('redmesa', 'Permit wait')).toContain(`~${permitWait(s)} s`);
+  });
+
+  it('Port Solenne: a Solenne trader gets export certificates, a port bonus while ships move, and two slots', () => {
+    const s = newGame('solenne', 1);
+    expect(s.shipSlots).toBe(SOLENNE_START_SLOTS);
+    expect(newGame('ironhold', 1).shipSlots).toBe(1);
+    s.cash = 1e6;
+    const legal = quote(s, 'textiles', 20, 'ironhold', 'legal');
+    s.currentRegion = 'amberfield';
+    const fromElsewhere = quote(s, 'textiles', 20, 'ironhold', 'legal');
+    s.currentRegion = 'solenne';
+    expect(legal.importTariff / legal.value).toBeCloseTo((fromElsewhere.importTariff / fromElsewhere.value) * FREE_PORT_CERT, 6);
+    const stall = place(s, 'solenne', 'cratestall');
+    const base = inc(s, 'solenne', stall);
+    expect(ship(s, 'textiles', 20, 'ironhold', 'legal').ok).toBe(true);
+    expect(inc(s, 'solenne', stall) / base).toBeCloseTo(1 + PORT_BONUS, 6);
+    expect(ship(s, 'seafood', 20, 'neonvale', 'legal').ok).toBe(true);
+    expect(inc(s, 'solenne', stall) / base).toBeCloseTo(1 + 2 * PORT_BONUS, 6);
+    expect(PORT_MAX_SHIPS).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Red Mesa: every new business needs a permit except the Fuel Pump; street stalls wait less', () => {
+    const s = newGame('redmesa', 1);
+    s.cash = 1e6;
+    s.t = 137.4; // mid-game clock: "no permit" must mean no wait at all, not "until now"
+    const smalls = getCity('redmesa').lots.filter((d) => s.regions.redmesa.lots[d.id].owner === 'vacant' && d.footprint === 'small');
+    expect(buyVacant(s, 'redmesa', smalls[0].id, 'fuelpump').ok).toBe(true);
+    expect(s.regions.redmesa.lots[smalls[0].id].permitUntil).toBe(0);
+    expect(inc(s, 'redmesa', smalls[0].id)).toBeGreaterThan(0);
+    expect(buyVacant(s, 'redmesa', smalls[1].id, 'cart').ok).toBe(true);
+    const wait = s.regions.redmesa.lots[smalls[1].id].permitUntil - s.t;
+    expect(wait).toBeGreaterThan(20);
+    expect(wait).toBeCloseTo(permitWait(s) * PERMIT_TIER1, 0);
+  });
 });
+

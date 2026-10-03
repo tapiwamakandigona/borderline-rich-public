@@ -94,7 +94,8 @@ export interface RegionDef {
   pros: string[];
   cons: string[];
   hustle: { label: string; perTap: number; upgradeName: string };
-  economy: { costIndex: number; wageIndex: number; corruption: number; demand: Record<Category, number> };
+  /** spend = customer spending power (income multiplier; default 1). */
+  economy: { costIndex: number; wageIndex: number; corruption: number; spend?: number; demand: Record<Category, number> };
   baseLaws: Laws;
   produces: GoodId[];
   demands: GoodId[];

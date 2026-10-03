@@ -1,6 +1,7 @@
 // Region picker: swipeable cards over a live 3D flyover of each starting city.
 import { useEffect, useRef } from 'preact/hooks';
 import { REGIONS } from '../core/data/regions';
+import { regionFacts } from '../core/pitch';
 import { useSession, Btn } from './kit';
 import { Icon, Stars } from './icons';
 
@@ -56,6 +57,11 @@ export function RegionSelect() {
             <div class="rc-sig">
               <span class="sig-name">{r.signature.name}</span>
               <span>{r.signature.summary}</span>
+              <dl class="rc-facts" data-testid={`facts-${r.id}`}>
+                {regionFacts(r.id).map((f) => (
+                  <div key={f.label} class={f.tone ?? ''}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+                ))}
+              </dl>
             </div>
             <div class="rc-cols">
               <ul class="pros">{r.pros.map((p) => <li key={p}>{p}</li>)}</ul>

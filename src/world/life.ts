@@ -209,13 +209,21 @@ export class Smoke {
   readonly mesh: THREE.InstancedMesh;
   private puffs: { src: number; age: number; life: number; dx: number; dz: number }[] = [];
   private tex = glowTexture();
-  constructor(private sources: THREE.Vector3[], r: RngHolder) {
-    const per = 6;
-    const n = Math.max(1, sources.length * per);
-    this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.tex, color: 0xd9dde2, transparent: true, opacity: 0.55, depthWrite: false }), n);
+  private sources: THREE.Vector3[] = [];
+  private static readonly PER = 6;
+  private static readonly MAX_SOURCES = 96;
+  constructor(sources: THREE.Vector3[], private r: RngHolder) {
+    this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.tex, color: 0xd9dde2, transparent: true, opacity: 0.55, depthWrite: false }), Smoke.PER * Smoke.MAX_SOURCES);
     this.mesh.frustumCulled = false;
-    sources.forEach((_, si) => { for (let k = 0; k < per; k++) this.puffs.push({ src: si, age: (k / per) * 4.5, life: 4.5, dx: range(r, -0.3, 0.3), dz: range(r, -0.3, 0.3) }); });
-    if (!sources.length) this.mesh.count = 0;
+    this.setSources(sources);
+  }
+  /** Swap the chimney list in place (no new texture/material/mesh): city chunks rebuild often. */
+  setSources(sources: THREE.Vector3[]): void {
+    this.sources = sources.slice(0, Smoke.MAX_SOURCES);
+    const per = Smoke.PER;
+    this.puffs = [];
+    this.sources.forEach((_, si) => { for (let k = 0; k < per; k++) this.puffs.push({ src: si, age: (k / per) * 4.5, life: 4.5, dx: range(this.r, -0.3, 0.3), dz: range(this.r, -0.3, 0.3) }); });
+    this.mesh.count = this.puffs.length;
   }
   update(dt: number, cam: THREE.Camera): void {
     this.puffs.forEach((p, k) => {

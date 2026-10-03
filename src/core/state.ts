@@ -7,6 +7,8 @@ import { getCity } from './city';
 import { allowedBiz } from './economy';
 import { int, next, range, weighted } from './rng';
 import { DAY, SAVE_VERSION } from './constants';
+import { SOLENNE_START_SLOTS } from './mechanics';
+import { startingRuler } from './laws';
 
 const lot = (owner: string, biz: string | null = null, level = 0): LotState => ({
   owner, biz, level, till: 0, manager: false, invested: 0, permitUntil: 0, frozenUntil: 0,
@@ -59,7 +61,7 @@ function initRegion(s: GameState, regionId: RegionId, home: RegionId, index: num
 
   const factions: Record<string, FactionState> = {};
   for (const f of R.factions) factions[f.id] = { popularity: f.basePopularity, standing: 0, donated: 0, seats: 0 };
-  const ruling = [...R.factions].sort((a, b) => b.basePopularity - a.basePopularity)[0].id;
+  const ruling = startingRuler(regionId);
   const market = {} as Record<GoodId, number>;
   for (const g of GOODS) market[g.id] = anchorPrice(regionId, g.id) * range(s, 0.92, 1.08);
 
@@ -94,6 +96,7 @@ export function newGame(home: RegionId, seed = 12345): GameState {
     notices: [], nextNoticeId: 1, lastSeenWall: 0,
     timers: { market: 15, churn: 30 },
   } as GameState;
+  if (home === 'solenne') s.shipSlots = SOLENNE_START_SLOTS;
   REGIONS.forEach((R, i) => { s.regions[R.id] = initRegion(s, R.id, home, i); });
   REGIONS.forEach((R) => R.rivals.forEach((rd, k) => {
     s.rivals[rd.id] = { id: rd.id, regionId: R.id, cash: rd.startCash, acquired: false, nextActAt: 8 + k * 2.3, lastAction: 'Watching the newcomer.' };

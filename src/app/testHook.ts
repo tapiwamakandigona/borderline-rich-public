@@ -48,6 +48,24 @@ export function installTestHook(s: Session): void {
     playerPos: () => ({ x: s.world.player.pos.x, z: s.world.player.pos.z }),
     camera: () => ({ azimuth: s.world.rig.azimuth, dist: s.world.rig.dist, polar: s.world.rig.polar }),
     stats: () => s.world.stats(),
+    /** Change ONE lot's business and report what the world rebuilt (critic #5), vs a full rebuild. */
+    rebuildProbe: () => {
+      const st = s.state!;
+      const lots = st.regions[st.currentRegion].lots;
+      const id = Object.keys(lots).find((k) => lots[k].owner === 'vacant')!;
+      s.syncWorld(); // flush anything pending first
+      const before = s.world.perf.rebuilds;
+      const t0 = performance.now();
+      lots[id] = { ...lots[id], owner: 'npc', biz: 'cart', level: 1 };
+      st.rev++;
+      s.syncWorld();
+      const ms = performance.now() - t0;
+      const chunksRebuilt = s.world.perf.rebuilds - before;
+      const t1 = performance.now();
+      (s.world as unknown as { rebuildCity(l: typeof lots): void }).rebuildCity(lots);
+      const fullMs = performance.now() - t1;
+      return { chunksRebuilt, ms, fullMs, chunks: s.world.stats().chunks };
+    },
   };
   (globalThis as unknown as { __BR: typeof api }).__BR = api;
 }

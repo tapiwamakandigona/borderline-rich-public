@@ -5,6 +5,14 @@ import type { BusinessDef, Footprint, GoodDef } from '../types';
 export const BUSINESSES: BusinessDef[] = [
   { id: 'cart', name: 'Street Food Cart', category: 'food', tier: 1, baseCost: 60, baseIncome: 1, blurb: 'Grease, salt and margins. Everyone starts somewhere.' },
   { id: 'kiosk', name: 'Corner Kiosk', category: 'retail', tier: 1, baseCost: 400, baseIncome: 5, blurb: 'Gum, lottery tickets, gossip. Mostly gossip.' },
+  // Region starters: one cheap tier-1 business per region in its signature category
+  // (mechanics.ts SIGNATURE_CATEGORY), so each region's rules shape the very first minutes.
+  { id: 'cratestall', name: 'Crate Stall', category: 'logistics', tier: 1, baseCost: 90, baseIncome: 1.5, regions: ['solenne'], blurb: 'Repacks crates straight off the ships. Busier while your own cargo is moving.' },
+  { id: 'fuelpump', name: 'Fuel Pump', category: 'energy', tier: 1, baseCost: 110, baseIncome: 1.8, regions: ['redmesa'], blurb: 'One pump, one hose, one sunburnt attendant. No permit needed. Rides the fuel index.' },
+  { id: 'repairstall', name: 'Phone Repair Stall', category: 'tech', tier: 1, baseCost: 130, baseIncome: 2.1, regions: ['neonvale'], blurb: 'Cracked screens are a renewable resource. Rides the hype cycle.' },
+  { id: 'eggstand', name: 'Egg Stand', category: 'agri', tier: 1, baseCost: 80, baseIncome: 1.3, regions: ['amberfield'], blurb: 'Farm-fresh eggs, an honesty box and a dog that judges you. Follows the seasons.' },
+  { id: 'beachshack', name: 'Beach Shack', category: 'hospitality', tier: 1, baseCost: 100, baseIncome: 1.6, regions: ['verano'], blurb: 'Coconuts, sunscreen and overpriced hammocks. Lives and dies by the tourist season.' },
+  { id: 'scrapforge', name: 'Scrap Forge', category: 'industry', tier: 1, baseCost: 100, baseIncome: 1.6, regions: ['ironhold'], blurb: 'Melts scrap into brackets. Good money, and the union counts every one.' },
   { id: 'farmstand', name: 'Farm Stand', category: 'agri', tier: 1, baseCost: 1400, baseIncome: 9, regions: ['amberfield', 'verano', 'redmesa'], blurb: 'Honest produce at dishonest prices.' },
   { id: 'laundromat', name: 'Laundromat', category: 'services', tier: 2, baseCost: 2500, baseIncome: 18, blurb: 'Cash business. Very clean. Suspiciously clean.' },
   { id: 'guesthouse', name: 'Guesthouse', category: 'hospitality', tier: 2, baseCost: 4000, baseIncome: 27, blurb: 'Six rooms, one view, five-star reviews you wrote yourself.' },
@@ -31,6 +39,10 @@ export const BUSINESSES: BusinessDef[] = [
 ];
 
 export const BIZ: Record<string, BusinessDef> = Object.fromEntries(BUSINESSES.map((b) => [b.id, b]));
+/** Each region's signature tier-1 starter business. */
+export const STARTER: Record<string, string> = {
+  solenne: 'cratestall', redmesa: 'fuelpump', neonvale: 'repairstall', amberfield: 'eggstand', verano: 'beachshack', ironhold: 'scrapforge',
+};
 
 export const FOOTPRINT_MAX_TIER: Record<Footprint, number> = { small: 2, medium: 3, large: 4, tower: 5 };
 export const FOOTPRINT_LAND: Record<Footprint, number> = { small: 80, medium: 2500, large: 120_000, tower: 6_000_000 };

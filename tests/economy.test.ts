@@ -3,8 +3,11 @@ import { newGame } from '../src/core/state';
 import { getCity } from '../src/core/city';
 import { BIZ } from '../src/core/data/businesses';
 import {
-  bizCost, derived, landPrice, lotValue, maxAffordable, milestoneMult, npcAsk, upgradeCost, upgradeCostN,
+  allowedBiz, bizCost, derived, landPrice, lotValue, maxAffordable, milestoneMult, npcAsk, projectIncome, upgradeCost, upgradeCostN,
 } from '../src/core/economy';
+import { REGIONS } from '../src/core/data/regions';
+import { STARTER } from '../src/core/data/businesses';
+import { buyRivalLot } from '../src/core/rivals';
 import { buyNpc, buyVacant, collect, hireManager, managerCost, upgradeLot } from '../src/core/actions';
 import { advance, step } from '../src/core/sim';
 import { DT, TILL_SECONDS } from '../src/core/constants';
@@ -151,4 +154,35 @@ describe('F5 businesses, lots, upgrades, managers', () => {
     buyVacant(s, R, ids[2], 'kiosk');
     expect(net(s, ids[0]) / alone).toBeCloseTo(1.05, 6);
   });
+
+  it('the lot card estimate is what the business really earns once bought (every region, critic #4)', () => {
+    for (const Rg of REGIONS) {
+      const r = Rg.id;
+      for (const bizId of [STARTER[r], 'cart', 'kiosk']) {
+        const s = newGame(r, 5);
+        quiet(s);
+        s.cash = 1e7;
+        s.rep = 20; // rep, overhead and synergy are part of the real formula too
+        const city = getCity(r);
+        const lot = city.lots.find((d) => s.regions[r].lots[d.id].owner === 'vacant' && allowedBiz(r, d).some((b) => b.id === bizId))!;
+        const est = projectIncome(s, r, lot.id, bizId);
+        expect(buyVacant(s, r, lot.id, bizId).ok, `${r} ${bizId}`).toBe(true);
+        s.regions[r].lots[lot.id].permitUntil = 0; // Red Mesa: compare once the permit has cleared
+        s.rev++;
+        const real = derived(s, true).lots[r][lot.id].net;
+        expect(real, `${r} ${bizId}`).toBeGreaterThan(0);
+        expect(est / real, `${r} ${bizId}: estimate ${est} vs real ${real}`).toBeCloseTo(1, 9);
+      }
+      // Buying an existing business: the "for you" figure matches too.
+      const s = newGame(r, 5);
+      quiet(s);
+      s.cash = 1e13;
+      const rivalLot = getCity(r).lots.find((d) => s.rivals[s.regions[r].lots[d.id].owner])!;
+      const ls = s.regions[r].lots[rivalLot.id];
+      const est = projectIncome(s, r, rivalLot.id, ls.biz!, ls.level);
+      expect(buyRivalLot(s, r, rivalLot.id).ok).toBe(true);
+      expect(est / derived(s, true).lots[r][rivalLot.id].net, `${r} rival lot`).toBeCloseTo(1, 9);
+    }
+  });
 });
+

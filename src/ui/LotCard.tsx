@@ -6,9 +6,10 @@ import { BIZ } from '../core/data/businesses';
 import { REGION } from '../core/data/regions';
 import { getCity } from '../core/city';
 import {
-  allowedBiz, derived, demandMult, fitMult, incomeIndex, landPrice, maxAffordable, milestoneMult, nextMilestone,
-  npcAsk, rivalAsk, sellPrice, tillCap, upgradeCostN,
+  allowedBiz, derived, demandMult, fitMult, landPrice, maxAffordable, milestoneMult, nextMilestone,
+  npcAsk, projectIncome, rivalAsk, sellPrice, tillCap, upgradeCostN,
 } from '../core/economy';
+import { permitWait } from '../core/mechanics';
 import { buyNpc, buyRivalLot, buyVacant, expeditePermit, hireManager, managerCost, sellLot, upgradeLot, vacantPrice } from '../core/actions';
 import { rivalDef } from '../core/rivals';
 import { money, perSec, duration } from '../core/format';
@@ -18,11 +19,12 @@ import type { GameState, RegionId } from '../core/types';
 
 const FOOT = { small: 'Small lot', medium: 'Medium lot', large: 'Large lot', tower: 'Tower plot' } as const;
 
-function fitLabel(s: GameState, rid: RegionId, district: string, bizId: string): { label: string; tone: string; est: number } {
+/** Fit label from demand × district fit; the ≈ $/s is the sim's own formula for YOU on this lot
+ *  (tax, upkeep, overhead, competition, laws, mechanic), not a raw base number (critic #4). */
+function fitLabel(s: GameState, rid: RegionId, lotId: string, district: string, bizId: string): { label: string; tone: string; est: number } {
   const b = BIZ[bizId];
   const m = demandMult(rid, b.category) * fitMult(rid, district, b.category);
-  const est = b.baseIncome * incomeIndex(rid) * m * (s.entitlements.doubleIncome ? 2 : 1);
-  return { label: m >= 1.12 ? 'Great fit' : m >= 0.97 ? 'Good fit' : 'Poor fit', tone: m >= 1.12 ? 'mint' : m >= 0.97 ? 'muted' : 'red', est };
+  return { label: m >= 1.12 ? 'Great fit' : m >= 0.97 ? 'Good fit' : 'Poor fit', tone: m >= 1.12 ? 'mint' : m >= 0.97 ? 'muted' : 'red', est: projectIncome(s, rid, lotId, bizId) };
 }
 
 export function LotCard() {
@@ -81,15 +83,16 @@ export function LotCard() {
         <div class="biz-list" data-testid="biz-list">
           {opts.map((b) => {
             const price = vacantPrice(st, rid, id, b.id);
-            const f = fitLabel(st, rid, def.district, b.id);
+            const f = fitLabel(st, rid, id, def.district, b.id);
+            const wait = rid === 'redmesa' ? permitWait(st, b.id) : 0;
             const afford = st.cash >= price;
             return (
               <button key={b.id} class={`biz-opt${afford && near ? '' : ' dim'}`} data-testid={`build-${b.id}`} disabled={!near}
                 onClick={() => s.run((g) => buyVacant(g, rid, id, b.id), { sfx: 'buy', lot: id, shake: JUICE.shake.buy })}>
                 <span class="bo-name">{b.name}<em class={`fit ${f.tone}`}>{f.label}</em></span>
                 <span class="bo-blurb">{b.blurb}</span>
-                <span class="bo-row"><b class="gold">{money(price)}</b><span class="mint">≈ {perSec(f.est)}</span>
-                  {rid === 'redmesa' && b.tier >= 2 && <span class="red">needs permit</span>}</span>
+                <span class="bo-row"><b class="gold">{money(price)}</b><span class="mint" data-testid={`est-${b.id}`}>≈ {perSec(f.est)}</span>
+                  {wait > 0 && <span class="red">permit ~{duration(wait)}</span>}</span>
               </button>
             );
           })}
@@ -106,7 +109,7 @@ export function LotCard() {
         <p class="lot-blurb">{rd ? `${rd.ceo}: “${rd.quote}”` : BIZ[ls.biz!].blurb}</p>
         <div class="lot-stats">
           <Stat label="Level" value={String(ls.level)} />
-          <Stat label="Earns" value={perSec(inc?.net ?? 0)} tone="mint" />
+          <Stat label="For you" value={`≈ ${perSec(projectIncome(st, rid, id, ls.biz!, ls.level))}`} tone="mint" />
           <Stat label="Asking" value={money(price)} tone="gold" />
         </div>
         {goBar}

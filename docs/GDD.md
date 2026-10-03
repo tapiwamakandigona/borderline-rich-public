@@ -50,18 +50,30 @@ decrees are scheduled in days. The sim steps at a fixed 0.1 s.
 
 ## 5. Regions (the heart of M1)
 
-| Region | City | Difficulty | Government | Signature mechanic |
-|---|---|---|---|---|
-| Port Solenne | Solenne | ★★ | Merchant Council — buy **permanent guild seats** | **Free Port**: 0 % import tariff; cheap transshipment hub; storms and dock strikes |
-| Red Mesa Territory | Dustwater | ★★★ | Territorial Governor — **rigged elections** (incumbent ×2.5) | **Permits & Favours**: tier ≥ 2 businesses wait for permits unless you bribe; oil boom/bust index; bandits |
-| Neon Vale | Neon Vale | ★★★★ | City Council democracy (3-day cycle) | **Hype Cycle**: tech/services income rides a city-wide hype wave; VC term sheets; antitrust probes |
-| Amberfield County | Amberfield | ★ | County Assembly | **Seasons & Harvests**: 4-day crop cycle (×0.4 → ×2.0 agri); co-op bonus for 3+ farms |
-| Isla Verano | Puerto Verano | ★★ | Island Assembly | **Tourist Seasons & Offshore**: high/low season swings; hurricanes; offshore shelter cuts tax everywhere at a heat cost |
-| Ironhold | Ironhold | ★★★ | Workers' Diet | **Union Mood**: falls as you grow; low mood → strikes stop industry; wage deals; protectionist "Buy Local" |
+| Region | City | Difficulty | Government | Starter business | Signature mechanic |
+|---|---|---|---|---|---|
+| Amberfield County | Amberfield | ★ Relaxed | County Assembly | Egg Stand (farm) | **Seasons & Harvests**: farm income follows a 4-season cycle; co-op bonus for 3+ farm businesses |
+| Isla Verano | Puerto Verano | ★★ Standard | Island Assembly | Beach Shack (hospitality) | **Tourist Seasons & Offshore**: high/low season swings; hurricanes; offshore shelter cuts tax elsewhere at a heat cost |
+| Red Mesa Territory | Dustwater | ★★ Standard | Territorial Governor — **rigged elections** | Fuel Pump (energy) | **Permits & Favours**: every new business waits for a permit (street stalls wait less) except the Fuel Pump — or you bribe; boom/bust fuel index; poor customers |
+| Port Solenne | Solenne | ★★ Standard | Merchant Council — **permanent guild seats** | Crate Stall (logistics) | **Free Port**: legal exports carry a free-port certificate (import tariff cut); your logistics earn more per ship you have moving; 2 shipping slots from day one; imports tariff-free |
+| Ironhold | Ironhold | ★★★ Hard | Workers' Diet | Scrap Forge (industry) | **Union Mood**: falls as your industry grows; low mood → strikes stop industry & logistics; wage deals cost money |
+| Neon Vale | Neon Vale | ★★★★ Expert | City Council (3-day cycle) | Phone Repair Stall (tech) | **Hype Cycle**: tech/services ride a city-wide hype wave; VC term sheets; antitrust; most expensive city, low spend per customer |
 
-Each region also differs in cost index, wage index, corruption, category demand, base laws,
-starting hustle, produced/demanded goods, five named districts, 2–4 named rivals with
-personalities, and ≥ 6 region-only events. Full data: `src/core/data/regions.ts`.
+**Every number a player sees on a region card is generated** from the live rules by
+`src/core/pitch.ts` (`regionFacts`). The prose in `data/regions.ts` carries no multipliers or
+percentages — a test enforces it — so the pitch can never drift from the game again.
+
+**Region identity is measured, not asserted** (`tests/difficulty.test.ts`, real sim + bot):
+- after 20 minutes ≥ 25 % of every region's empire is in its signature category (the starter
+  business + the mechanic shape the opening; before T10c it was carts and kiosks everywhere);
+- fewer difficulty stars ⇒ higher purchasing-power net worth at 30 minutes (geometric mean of
+  3 seeds, pairwise, 25 % margin). Stars were re-rated from these measurements in T10c
+  (Red Mesa ★★★ → ★★): its difficulty is risk (bribes, heat, rigged elections), not slowness.
+- Tuning tools: `npx tsx scripts/region-report.ts` (empire mix + 45-min outcome per seed).
+
+Each region also differs in cost index, wage index, customer spending, corruption, category
+demand, base laws, starting hustle, produced/demanded goods, five named districts, 2–4 named
+rivals with personalities, and ≥ 6 region-only events. Full data: `src/core/data/regions.ts`.
 
 ## 6. Trade & tariffs (risk layer)
 

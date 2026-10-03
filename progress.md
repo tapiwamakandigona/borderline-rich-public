@@ -48,3 +48,14 @@
 - T10a VERIFIED: new controls.spec fails on the old main.tsx (joystick ring never drawn — Preact had adopted it as the UI root) and passes on the fix; HUD boxes identical before/after a joystick drag.
 - T10b VERIFIED: ui.spec asserts no rank-up over the lot card or sheets, no toast over the event modal (held toast appears after it closes), exactly one "thank you" toast per purchase. Screenshots reviewed (ui-vacant, ui-event, ui-sheet-politics).
 - npm run ci green (12 files). Note: e2e spec timing flake fixed by polling the goal tick instead of sleeping 300 ms.
+
+## 2026-10-03 08:45 UTC — T10c/T10d/T10e
+- T10c region identity. Root cause of "every region plays the same": carts/kiosks had the best payback everywhere and signature mechanics only touched tier 2+. Added six region-only tier-1 starters (one per signature category) with own 3D models; Solenne free-port certificate (legal exports: import tariff ×0.5) + port bonus (+20 %/ship moving, max 3) + 2 starting slots; Red Mesa permits for every new business except the Fuel Pump (stalls ×0.4 wait); `spend` (customer spending) economy knob: Red Mesa 0.8, Neon Vale 0.75, Verano 0.9; Red Mesa rivals richer.
+- VERIFIED tests/difficulty.test.ts (3 seeds × 30 min, real sim + bot): signature category 29–70 % of 20-min empires in every region (baseline 0–36 %); stars order purchasing-power net worth pairwise with 25 % margin. Red Mesa re-rated ★★★ → ★★ from the measurements (8-seed 45-min geo means: AF 29.7M, VE 14.4M, RM 11.8M, SO 7.3M, IH 3.1M, NV 1.1M).
+- FINDING: bot outcomes are chaotic (shared RNG across regions + land race amplify early luck ~10×); single-seed comparisons are meaningless — use geometric means over ≥3 seeds (scripts/difficulty-scan.ts runs regions in parallel).
+- FINDING: the city saturates (no vacant/NPC lots) after ~15–20 min of bot play; the bot never buys rival lots or expands, so its mid-game is upgrades only. M2 candidate: minimum tier per footprint so big lots host big businesses; teach the bot rival buyouts/expansion.
+- T10c cards: prose has no numbers (test), all numbers from src/core/pitch.ts regionFacts(); GDD §5 updated.
+- T10d VERIFIED: projectIncome() = sim formula; economy.test asserts estimate == real income after purchase to 1e-9 (6 regions × starter/cart/kiosk + rival lot).
+- T10e VERIFIED: world.spec rebuildProbe: one lot → 1/9 chunks, 6.3–10.5 ms vs 53–56 ms full city (sandbox CPU).
+- Bug found by e2e: a permit-free Fuel Pump got permitUntil = now (idle < 1 s); fixed; unit test now uses a mid-game clock and VERIFIED fails on the old line.
+- npm run ci green: 13 files / 92 tests.
