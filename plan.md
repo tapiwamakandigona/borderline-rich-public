@@ -82,7 +82,25 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         cheapest opener (12-seed tech share 46–79 %, was min 11 %) (F3, F17)
   - [x] T10i Region select works on small phones (375×667, 360×640, 360×740): scrollable cards,
         sticky Start, one-line title + e2e with real touch drags (F14)
-  - [ ] T10h Evidence: F16 wording, re-run the critic until PASS
+  - [x] T10h Re-run the critic → evaluation #2 (2026-10-03 10:45 UTC): **NEEDS_WORK**, prior findings
+        10 FIXED / 4 PARTIAL, 11 new findings → T12 below
+- [ ] T11 Android APK + public CI copy (owner request 2026-10-03 10:37 UTC) (F18, F1): Capacitor 8 `android/`
+      (portrait, immersive, branded icon/splash from `public/icon.svg`), back button + pause/resume via
+      `src/app/native.ts`, public repo `borderline-rich-public` with signing secrets, CI jobs apk →
+      device-smoke (emulator: install, Start, hustle, screenshots) → rolling `playtest` release
+- T12 fix list — critic evaluation #2, player-impact order (finding # in `evaluation.json` in brackets):
+  - [ ] T12a Rivals play fair: no price war on a brand-new player (same 600 s gate as offers/sabotage),
+        an affordable remedy; rivals seeded at their designed size (startCash, capped levels; the
+        "mega-rival" really is the biggest); rivals can't spend money they don't have [new 1, 2, 3] (F8, F17)
+  - [ ] T12b Toasts never cover the lot-card header or the cash card (360×640) + e2e guard; the region
+        starter is listed first on a vacant lot, tagged as the local pick [new 4, 5; prior 7] (F14, F15)
+  - [ ] T12c Text tells the truth: Solenne Free Port panel + no transship option for Solenne residents;
+        rm_nephew "Refuse" has a real effect; "an Egg Stand" [new 9, 10, 11] (F6, F9)
+  - [ ] T12d Evidence: ui.spec compares the card estimate with the real income; F15/F16 wording matches
+        the specs [new 7; prior 13] (F15, F16)
+  - [ ] T12e Region goal chains: the first 10–20 min of goals teach each region's signature [new 8; prior 2] (F3, F10)
+  - [ ] T12f Visuals: follow-camera framing, readable Neon Vale day, Amberfield meadow ground [new 6; prior 6] (F13)
+  - [ ] T12g Re-run the critic until PASS
 
 ## 5. How to verify (definition of done)
 
@@ -95,14 +113,19 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
 ## 6. Known risks / open questions
 
 - Real IAP needs Apple/Google developer accounts + product setup (owner action, costs money).
-- Headless Chromium uses SwiftShader: frame timings there are NOT device performance.
-- Native packaging (Android SDK / Xcode) is not available in the build sandbox.
+- Headless Chromium uses SwiftShader: frame timings there are NOT device performance (same for the
+  CI Android emulator, which renders with swiftshader_indirect).
+- Neither the Android SDK nor Xcode is available in the build sandbox, so the APK is built and tested only in CI (public repo).
+  iOS needs macOS + Xcode + an Apple developer account.
+- The Android signing key lives in the public repo's Actions secrets and the operator's secrets store.
+  If it is lost, installed playtest builds can't be updated in place (uninstall/reinstall loses the save).
 - Balance is tuned by the bot in `tests/balance.test.ts`; real players will differ — add
   analytics in M3 before trusting numbers.
 
 ## 7. Resume checklist for a new agent
 
-1. `git pull`, `npm ci`, `npx playwright install chromium`.
+1. `git pull`, `npm ci`, `npx playwright install chromium`. Push `main` to BOTH remotes (`origin` private,
+   `public` = borderline-rich-public); CI, the APK and the `playtest` release run only on `public`.
 2. Read files listed at the top. Do not re-litigate PROJECT.md standing decisions.
 3. Find the first open task above → do only that → verify → commit → append to progress.md
    → tick the box here.

@@ -116,6 +116,7 @@ export class Session {
     }
     document.addEventListener('visibilitychange', this.onVisibility);
     addEventListener('pagehide', () => this.save());
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.back()) e.preventDefault(); });
     addEventListener('pointerdown', () => this.sfx.unlock(), { capture: true });
     this.raf = requestAnimationFrame(this.frame);
   }
@@ -405,14 +406,41 @@ export class Session {
     if (rep.seconds > 0 && rep.earned > 0) this.welcome.value = rep;
   }
 
+  /** The app went to the background (tab hidden, Android pause): remember when, and save. */
+  suspend(): void {
+    if (!this.hiddenAt) this.hiddenAt = Date.now();
+    this.save();
+  }
+
+  /** Back from the background: credit the time away exactly once (the page's visibilitychange
+   *  and the native resume event can both fire for the same trip). */
+  resume(): void {
+    const at = this.hiddenAt;
+    this.hiddenAt = 0;
+    if (!at || !this.state) return;
+    this.applyAway((Date.now() - at) / 1000);
+    this.last = performance.now();
+    this.acc = 0;
+  }
+
+  /**
+   * Android back button / Escape: close the top-most overlay. Returns false when nothing was open,
+   * so the native shell can minimise the app. An event card needs an explicit choice, so back is
+   * swallowed there rather than skipping the decision.
+   */
+  back(): boolean {
+    const pay = this.pendingPurchase.value;
+    if (pay) { pay.resolve(false); return true; }
+    if (this.welcome.value) { this.welcome.value = null; this.sfx.play('cash'); return true; }
+    if (this.state?.pendingEvent && this.screen.value === 'game') return true;
+    if (this.sheet.value) { this.openSheet(null); return true; }
+    if (this.selected.value) { this.select(null); return true; }
+    return false;
+  }
+
   private onVisibility = (): void => {
-    if (document.visibilityState === 'hidden') { this.hiddenAt = Date.now(); this.save(); return; }
-    if (this.hiddenAt && this.state) {
-      this.applyAway((Date.now() - this.hiddenAt) / 1000);
-      this.hiddenAt = 0;
-      this.last = performance.now();
-      this.acc = 0;
-    }
+    if (document.visibilityState === 'hidden') this.suspend();
+    else this.resume();
   };
 
   updateSettings(patch: Partial<Settings>): void {

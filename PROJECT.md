@@ -23,7 +23,8 @@ every entry in `features.json` passes with evidence and a hosted build is playab
 - Portrait-first mobile UI; floating joystick + drag-orbit + pinch + tap (2026-10-03)
 - Monetisation: premium "Gold" + starter pack + 2 non-consumables; no ads, no paywalls; sandbox store on web until store accounts exist (2026-10-03)
 - One builder agent; one read-only critic on the highest tier after features (owner request 2026-10-03)
-- Repo is private (commercial product) (2026-10-03)
+- Source repo is private; an identical public copy (tapiwamakandigona/borderline-rich-public) runs CI for free and publishes the Android APK as the rolling `playtest` release — owner request (2026-10-03 10:37 UTC)
+- Android via Capacitor 8 (`android/` committed, portrait, immersive); release APK signed in CI with a key held in repo secrets + the operator's secrets store, never in git (2026-10-03)
 
 ## Constraints
 

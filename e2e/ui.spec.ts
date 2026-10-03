@@ -102,3 +102,38 @@ test('a full scripted session', async ({ page }) => {
   expect(errors).toEqual([]);
   void ({} as BR);
 });
+
+// Android back (Escape on desktop) closes the top-most overlay first; with nothing open,
+// session.back() is false and the native shell minimises the app (src/app/native.ts).
+test('back closes the top overlay first; events still need a choice', async ({ page }) => {
+  const errors = watchErrors(page);
+  await freshStart(page, 'solenne');
+  await ev(page, 'b.quiet()');
+  // Payment confirm on top of the Store sheet: back cancels the payment, then closes the sheet.
+  await page.locator('[data-testid="nav-store"]').click();
+  await page.locator('[data-testid="buy-br.gold.120"]').click();
+  await expect(page.locator('[data-testid="pay-sheet"]')).toBeVisible();
+  const gold = await ev<number>(page, 'b.state().gold');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-testid="pay-sheet"]')).toHaveCount(0);
+  await expect(page.locator('[data-sheet="store"]')).toBeVisible();
+  expect(await ev<number>(page, 'b.state().gold')).toBe(gold); // cancelled: nothing granted
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-sheet="store"]')).toHaveCount(0);
+  // Lot card.
+  const lot = await ev<string>(page, "b.findLot('vacant', 'small')");
+  await ev(page, `b.session.select('${lot}')`);
+  await expect(page.locator('[data-testid="lot-card"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-testid="lot-card"]')).toHaveCount(0);
+  // An event card is a decision: back is swallowed and the card stays.
+  await ev(page, "b.event('burst_pipe')");
+  await expect(page.locator('[data-testid="event-modal"]')).toBeVisible();
+  expect(await ev<boolean>(page, 'b.session.back()')).toBe(true);
+  await expect(page.locator('[data-testid="event-modal"]')).toBeVisible();
+  await page.locator('[data-testid="choice-0"]').click();
+  await expect(page.locator('[data-testid="event-modal"]')).toHaveCount(0);
+  // Nothing open: back reports false, so the app shell would minimise.
+  expect(await ev<boolean>(page, 'b.session.back()')).toBe(false);
+  expect(errors).toEqual([]);
+});

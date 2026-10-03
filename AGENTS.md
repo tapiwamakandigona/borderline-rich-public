@@ -15,13 +15,19 @@ npm run ci                               # full gate: typecheck + tests + build 
 npm run dev                              # local dev server
 npm run build:test && npx playwright test   # e2e + screenshots (e2e/__shots__/), touch viewport 390x844
 npm run build:single                     # one-file HTML for hosted playtests (< 2 MB)
+npm run build && npx cap sync android    # Android project (APK is built + emulator-tested in CI)
+node scripts/android-icons.mjs           # regenerate Android icons/splash from public/icon.svg
 ```
+
+Remotes: `origin` = private source repo; `public` = tapiwamakandigona/borderline-rich-public, where
+CI runs (jobs skip in the private repo) and the `playtest` release carries the APK. Push `main` to both.
 
 ## Structure
 
 - `src/core/` — pure deterministic sim (no DOM/three). All state changes go through `actions.ts`.
 - `src/core/data/` — content: regions, businesses, events, goods, progression. Balance lives here.
 - `src/iap/` — catalog, Store interface, sandbox + native adapters, idempotent fulfillment.
+- `src/app/native.ts` + `android/` — Capacitor shell (back button, pause/resume, immersive).
 - `src/world/` — three.js renderer; reads `core/city.ts` layout; never mutates sim state.
 - `src/input/`, `src/ui/`, `src/audio/` — controls, Preact overlay, synthesized SFX.
 - `tests/` (Vitest) and `e2e/` (Playwright).

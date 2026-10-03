@@ -136,6 +136,14 @@
       "verify": "npx vitest run tests/balance.test.ts",
       "passes": true,
       "evidence": "VERIFIED 2026-10-03: tests/balance.test.ts 8/8 — 45-min bot net worth (seed 21): solenne $4.79M, redmesa $6.19M, neonvale $3.25M, amberfield $20.0M, verano $15.8M, ironhold $2.32M; first business 11.9-16.2 s; no NaN, cash never negative. tests/difficulty.test.ts: stars order purchasing-power net worth pairwise over 3 seeds with a 25 % margin (pp@30m: Amberfield $4.70-17.4M, Verano $5.95-8.52M, Red Mesa $3.78-6.92M, Solenne $1.10-2.78M, Ironhold $794K-1.22M, Neon Vale $649-757K)."
+    },
+    {
+      "id": "F18",
+      "title": "Android APK",
+      "acceptance": "Capacitor Android project in git; CI on the public repo builds a release APK signed with a stable key (apksigner verifies, versionCode = run number), installs it on an Android emulator, starts a game and earns cash by hustling with no crash; the APK is published as the rolling 'playtest' release; Android back closes the top overlay before leaving the app (e2e)",
+      "verify": "GitHub Actions on tapiwamakandigona/borderline-rich-public: jobs apk + device-smoke + release green; npx playwright test -g 'back closes'",
+      "passes": false,
+      "evidence": ""
     }
   ]
 }

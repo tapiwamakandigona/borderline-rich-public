@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Android emulator smoke test for the built APK (CI job device-smoke, inside the emulator runner).
+# Proves on a real Android WebView: the APK installs and cold-starts, the region select renders,
+# "Start in …" enters the city, Hustle taps earn cash, and the app has not crashed.
+# Usage: scripts/android-smoke.sh path/to.apk [out-dir]   (screenshots, UI dumps, logcat → out-dir)
+set -uo pipefail
+APK=${1:?usage: android-smoke.sh app.apk [out]}
+OUT=${2:-smoke}
+PKG=com.borderlinerich.game
+UI="python3 scripts/android_ui.py"
+mkdir -p "$OUT"
+
+finish() { adb logcat -d > "$OUT/logcat.txt" 2>/dev/null || true; }
+fail() { echo "SMOKE FAIL: $*"; shot "fail"; finish; exit 1; }
+shot() { adb exec-out screencap -p > "$OUT/$1.png" 2>/dev/null || true; }
+dump() { adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 && adb shell cat /sdcard/ui.xml > "$OUT/$1.xml" 2>/dev/null; }
+# wait_for NAME REGEX TRIES: poll the accessibility tree until a node matches; prints "x y".
+wait_for() {
+  local i xy
+  for ((i = 0; i < $3; i++)); do
+    sleep 3
+    dump "$1"
+    if xy=$($UI "$OUT/$1.xml" find "$2"); then echo "$xy"; return 0; fi
+  done
+  return 1
+}
+
+adb install -r "$APK" || fail "adb install"
+adb shell dumpsys package "$PKG" | grep -E "versionCode|versionName" | head -2
+adb logcat -c
+adb shell am start -W -n "$PKG/.MainActivity" || fail "launch"
+
+XY=$(wait_for 1-select 'Start in ' 40) || fail "region select never showed a Start button"
+sleep 4; shot 1-region-select          # let the 3D flyover draw a few frames
+echo "Start button at $XY"
+adb shell input tap $XY
+
+HX=$(wait_for 2-city '^Hustle$' 30) || fail "no Hustle button after Start"
+sleep 4; shot 2-city
+BEFORE=$($UI "$OUT/2-city.xml" money || echo 0)
+for _ in 1 2 3 4 5 6 7 8; do adb shell input tap $HX; sleep 0.5; done
+sleep 3; dump 3-hustle; shot 3-hustle
+AFTER=$($UI "$OUT/3-hustle.xml" money || echo 0)
+echo "cash before=$BEFORE after=$AFTER"
+python3 -c "import sys; sys.exit(0 if float('$AFTER') > float('$BEFORE') else 1)" || fail "hustle taps did not raise cash"
+
+adb shell pidof "$PKG" > /dev/null || fail "app process is gone"
+finish
+if grep -E "FATAL EXCEPTION|ANR in $PKG" "$OUT/logcat.txt"; then fail "crash/ANR in logcat"; fi
+echo "SMOKE OK"

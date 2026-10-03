@@ -12,3 +12,7 @@ e2e/__shots__/
 .env
 .env.*
 .secrets/
+# Signing keys never live in the repo (CI gets them from secrets)
+*.p12
+*.jks
+*.keystore

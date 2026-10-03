@@ -37,3 +37,8 @@ render(<App />, layer);
 if (__SIM_HOOK__) {
   void import('./app/testHook').then((m) => m.installTestHook(session));
 }
+
+// Android/iOS shell: back button + pause/resume. Checked inline so web builds never load the chunk.
+if ((globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()) {
+  void import('./app/native').then((m) => m.installNativeShell(session));
+}
