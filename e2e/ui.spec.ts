@@ -38,6 +38,9 @@ test('a full scripted session', async ({ page }) => {
   expect(est).toMatch(/≈ \$/);
   await page.locator('[data-testid="upgrade-1"]').click();
   expect(await ev<number>(page, `b.state().regions.redmesa.lots['${lot}'].level`)).toBe(2);
+  // Upgrades are visible: the building squashes and stretches, then merges back into the city.
+  expect(await ev<boolean>(page, `b.pulsing('${lot}')`)).toBe(true);
+  await expect.poll(() => ev<boolean>(page, `b.pulsing('${lot}')`), { timeout: 10_000 }).toBe(false);
   await ev(page, 'b.advance(30)');
   await page.locator('[data-testid="collect"]').click();
   expect(await ev<number>(page, 'b.state().stats.collects')).toBeGreaterThanOrEqual(1);

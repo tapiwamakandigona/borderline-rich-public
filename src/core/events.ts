@@ -7,7 +7,7 @@ import { getCity } from './city';
 import { derived, lotValue } from './economy';
 import { costIndex } from './laws';
 import { standingDelta } from './politics';
-import { FUEL_MAX, FUEL_MIN, HYPE_MAX, HYPE_MIN } from './mechanics';
+import { FUEL_MAX, FUEL_MIN, HYPE_MAX, HYPE_MIN, WAGE_DEAL_MAX } from './mechanics';
 import { chance, next, pick, range, weighted } from './rng';
 import { notify } from './notify';
 import { duration, money } from './format';
@@ -42,7 +42,9 @@ export function maybeTriggerEvent(state: GameState): void {
     !e.system && (e.region === 'global' || e.region === state.currentRegion) &&
     (state.eventsSeen[e.id] ?? -1e9) + (e.cooldown ?? 600) <= state.t && (!e.cond || e.cond(state)));
   if (!cands.length) return;
-  const e = weighted(state, cands, (x) => (x.weight ?? 1) * (x.region === 'global' ? 0.8 : 1.4));
+  // Early on, lean hard on the region's own events so each start feels like that place (critic #14).
+  const local = state.t < 1200 ? 3 : 1.4;
+  const e = weighted(state, cands, (x) => (x.weight ?? 1) * (x.region === 'global' ? 0.8 : local));
   trigger(state, e.id, state.currentRegion);
 }
 
@@ -178,7 +180,7 @@ function applyOutcome(state: GameState, pe: PendingEvent, o: Outcome): void {
       break;
     }
     case 'wageDeal':
-      state.regions.ironhold.vars.wageDeal = Math.min(0.3, state.regions.ironhold.vars.wageDeal + 0.05);
+      state.regions.ironhold.vars.wageDeal = Math.min(WAGE_DEAL_MAX, state.regions.ironhold.vars.wageDeal + 0.05);
       break;
   }
   state.rev++;

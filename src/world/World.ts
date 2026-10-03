@@ -7,7 +7,7 @@ import { makeRng } from '../core/rng';
 import { THEMES, type Theme } from './themes';
 import { facade, storefront } from './textures';
 import { GeoBuilder, type Bucket } from './geo';
-import { buildLots, type LotVisual } from './buildings';
+import { buildLots, levelBand, type LotVisual } from './buildings';
 import { buildScenery, type SceneryHandles } from './scenery';
 import { CoinBurst, Pedestrians, Smoke, Traffic, Weather } from './life';
 import { Markers } from './markers';
@@ -19,6 +19,9 @@ export interface WorldStats { calls: number; triangles: number; dpr: number; fps
 /** The city is merged per chunk of 2×2 blocks, so a lot change rebuilds ~1/9–1/6 of the city. */
 interface Chunk { defs: LotDef[]; meshes: THREE.Mesh[]; chimneys: THREE.Vector3[]; sig: string }
 const CHUNK_BLOCKS = 2;
+/** A lot lifted out of its merged chunk for a squash-and-stretch animation (critic #12). */
+interface Solo { group: THREE.Group; meshes: THREE.Mesh[]; t: number; dur: number; kind: 'grow' | 'pop'; chunk: Chunk }
+const easeOutBack = (x: number) => 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2;
 /** At most this many dirty chunks are rebuilt per sync (the rest wait for the next one). */
 const MAX_CHUNKS_PER_SYNC = 2;
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -41,6 +44,8 @@ export class World {
   private city = new THREE.Group();
   private visuals = new Map<string, LotVisual>();
   private chunks: Chunk[] = [];
+  private solos = new Map<string, Solo>();
+  private lastLots: Record<string, LotState> | null = null;
   private ownerSig = '';
   /** Rebuild accounting (exposed in stats() for tests and the settings panel). */
   readonly perf = { rebuilds: 0, lastMs: 0, maxMs: 0 };
@@ -87,6 +92,7 @@ export class World {
   }
 
   private disposeRegion(): void {
+    for (const id of [...this.solos.keys()]) this.dropSolo(id, false);
     for (const d of this.regionDisposables) d.dispose();
     this.regionDisposables = [];
     if (this.scenery) { this.scene.remove(this.scenery.group); this.scenery.dispose(); this.scenery = null; }
@@ -130,9 +136,10 @@ export class World {
     this.layout = getCity(regionId);
     const theme = (this.theme = THEMES[regionId]);
     const seed = this.layout.cols * 31 + this.layout.rows;
-    const fac = facade(theme.windowStyle, seed, theme.windowGlow);
+    const neon = theme.neon ? [0x3df2ff, 0xff3e9a, 0x9b5de5, 0xcfe2ff, 0xcfe2ff, 0xffd166] : undefined;
+    const fac = facade(theme.windowStyle, seed, theme.windowGlow, neon);
     const store = storefront(seed + 3, theme.windowGlow);
-    const curtain = facade('curtain', seed + 7, theme.neon ? 0xbfe0ff : theme.windowGlow);
+    const curtain = facade('curtain', seed + 7, theme.neon ? 0xbfe0ff : theme.windowGlow, neon);
     this.env = this.makeEnv(theme);
     this.mats = {
       upper: new THREE.MeshStandardMaterial({ map: fac.map, emissiveMap: fac.emissive, emissive: 0xffffff, emissiveIntensity: 0, vertexColors: true, roughness: 0.85 }),
@@ -194,7 +201,7 @@ export class World {
   }
 
   /** What a lot looks like (geometry changes only when this changes). */
-  private static lotSig(l: LotState | undefined): string { return l ? `${l.biz ?? '-'}${Math.floor(l.level / 10)}` : 'x'; }
+  private static lotSig(l: LotState | undefined): string { return l ? `${l.biz ?? '-'}${l.biz ? levelBand(l.level) : 0}` : 'x'; }
   private chunkSig(c: Chunk, lots: Record<string, LotState> | null): string {
     let s = '';
     for (const d of c.defs) s += World.lotSig(lots?.[d.id]) + '|';
@@ -205,7 +212,7 @@ export class World {
     const t0 = performance.now();
     for (const m of c.meshes) { this.city.remove(m); m.geometry.dispose(); }
     const gb = new GeoBuilder();
-    const out = buildLots(gb, this.layout!, lots, this.theme!, c.defs);
+    const out = buildLots(gb, this.layout!, lots, this.theme!, this.solos.size ? c.defs.filter((d) => !this.solos.has(d.id)) : c.defs);
     c.meshes = gb.build(this.mats!);
     for (const m of c.meshes) this.city.add(m);
     for (const [id, v] of out.lots) this.visuals.set(id, v);
@@ -231,6 +238,7 @@ export class World {
    *  when owners changed. Returns how many chunks were rebuilt. */
   syncLots(lots: Record<string, LotState>, ownerColor: (owner: string) => number | null, cashReady: Set<string>, permits: Set<string>): number {
     if (!this.layout) return 0;
+    this.lastLots = lots;
     let rebuilt = 0;
     for (const c of this.chunks) {
       if (rebuilt >= MAX_CHUNKS_PER_SYNC) break;
@@ -247,6 +255,52 @@ export class World {
     for (const id of permits) { const v = this.visuals.get(id); if (v) hold.push(v.center); }
     this.markers.setStatus(cash, hold);
     return rebuilt;
+  }
+
+  /** Squash-and-stretch a lot after an upgrade ('pop') or grow a new building out of the ground
+   *  ('grow'). The lot is lifted out of its merged chunk into its own small mesh for ~0.6 s, then
+   *  merged back. Geometry changes (new growth stage) show up immediately in the solo mesh. */
+  pulseLot(lotId: string, kind: 'grow' | 'pop' = 'pop'): void {
+    const def = this.layout?.lotById[lotId];
+    const lots = this.lastLots;
+    if (!def || !lots || def.civic) return;
+    const chunk = this.chunks.find((c) => c.defs.includes(def));
+    if (!chunk) return;
+    const prev = this.solos.get(lotId);
+    if (prev) this.dropSolo(lotId, false);
+    const gb = new GeoBuilder();
+    const out = buildLots(gb, this.layout!, lots, this.theme!, [def]);
+    const meshes = gb.build(this.mats!);
+    const group = new THREE.Group();
+    group.position.set(def.x, 0, def.z);
+    for (const m of meshes) { m.position.set(-def.x, 0, -def.z); m.matrixAutoUpdate = true; group.add(m); }
+    this.scene.add(group);
+    for (const [id, v] of out.lots) this.visuals.set(id, v);
+    this.solos.set(lotId, { group, meshes, t: 0, dur: kind === 'grow' ? 0.65 : 0.55, kind: prev?.kind === 'grow' ? 'grow' : kind, chunk });
+    if (!prev) this.buildChunk(chunk, lots); // the chunk without this lot (once per animation)
+  }
+  isPulsing(lotId: string): boolean { return this.solos.has(lotId); }
+
+  private dropSolo(lotId: string, merge: boolean): void {
+    const s = this.solos.get(lotId);
+    if (!s) return;
+    this.scene.remove(s.group);
+    for (const m of s.meshes) m.geometry.dispose();
+    this.solos.delete(lotId);
+    if (merge && this.lastLots) this.buildChunk(s.chunk, this.lastLots);
+  }
+
+  private updateSolos(dt: number): void {
+    for (const [id, s] of this.solos) {
+      s.t += dt;
+      const x = Math.min(1, s.t / s.dur);
+      let sy: number;
+      if (s.kind === 'grow') sy = Math.max(0.05, easeOutBack(x));
+      else sy = 1 - 0.2 * Math.exp(-5 * x) * Math.cos(x * 16);
+      const sxz = Math.min(1.25, 1 / Math.sqrt(Math.max(0.2, sy)));
+      s.group.scale.set(sxz, sy, sxz);
+      if (x >= 1) this.dropSolo(id, true);
+    }
   }
 
   select(lotId: string | null): void {
@@ -278,17 +332,20 @@ export class World {
     (this.scene.fog as THREE.Fog).color.copy(hor);
     const lightDir = night > 0.5 ? new THREE.Vector3(-dir.x, Math.abs(dir.y) + 0.4, dir.z).normalize() : dir;
     const day = smooth(-0.05, 0.25, elev);
-    this.sun.color.copy(night > 0.5 ? new THREE.Color(0x9fb6ff) : sunCol);
-    this.sun.intensity = theme.sunIntensity * day + 0.45 * night;
-    this.hemi.intensity = theme.hemi.intensity * (0.4 + 0.6 * (1 - night)) + 0.1;
-    this.hemi.color.setHex(theme.hemi.sky).lerp(new THREE.Color(0x3a4a7a), night * 0.8);
+    // Nights read as a stylised blue hour with warm windows, not a muddy near-black (critic #6d).
+    this.sun.color.copy(night > 0.5 ? new THREE.Color(0xb4c8ff) : sunCol);
+    this.sun.intensity = theme.sunIntensity * day + 0.85 * night;
+    this.hemi.intensity = theme.hemi.intensity * (0.55 + 0.45 * (1 - night)) + 0.15;
+    this.hemi.color.setHex(theme.hemi.sky).lerp(new THREE.Color(0x5a6fae), night * 0.85);
+    this.hemi.groundColor.setHex(theme.hemi.ground).lerp(new THREE.Color(0x2b2f44), night * 0.7);
+    this.renderer.toneMappingExposure = 1.05 + 0.3 * night;
     const focus = this.player.group.visible ? this.player.pos : new THREE.Vector3();
     this.sun.position.copy(focus).addScaledVector(lightDir, 200);
     this.sun.target.position.copy(focus);
     const m = this.mats!;
-    (m.upper as THREE.MeshStandardMaterial).emissiveIntensity = 0.03 + night * 1.25 + dusk * 0.25;
-    (m.glass as THREE.MeshStandardMaterial).emissiveIntensity = 0.02 + night * 0.9 + dusk * 0.25;
-    (m.ground as THREE.MeshStandardMaterial).emissiveIntensity = 0.12 + night * 1.3 + dusk * 0.3;
+    (m.upper as THREE.MeshStandardMaterial).emissiveIntensity = 0.03 + night * 1.5 + dusk * 0.3;
+    (m.glass as THREE.MeshStandardMaterial).emissiveIntensity = 0.02 + night * 1.15 + dusk * 0.3;
+    (m.ground as THREE.MeshStandardMaterial).emissiveIntensity = 0.12 + night * 1.6 + dusk * 0.35;
     (m.glow as THREE.MeshBasicMaterial).color.setScalar(0.85 + night * 0.9);
     for (const w of s.waterMats) {
       w.uniforms.skyCol.value.copy(hor);
@@ -297,7 +354,7 @@ export class World {
       w.uniforms.night.value = night;
       w.uniforms.time.value = this.time;
     }
-    if (s.lampPools) (s.lampPools.material as THREE.MeshBasicMaterial).opacity = night * 0.55 + dusk * 0.15;
+    if (s.lampPools) (s.lampPools.material as THREE.MeshBasicMaterial).opacity = night * 0.7 + dusk * 0.18;
     if (s.lampHeads) (s.lampHeads.material as THREE.MeshBasicMaterial).color.setHex(theme.lampColor).multiplyScalar(0.5 + night * 1.6);
     if (s.blades) s.blades.bases.forEach((b, i) => { s.blades!.mesh.setMatrixAt(i, b.clone().multiply(new THREE.Matrix4().makeRotationZ(this.time * 0.9 + i))); });
     if (s.blades) s.blades.mesh.instanceMatrix.needsUpdate = true;
@@ -396,6 +453,7 @@ export class World {
     this.weather?.update(dt, this.player.group.visible ? this.player.pos : new THREE.Vector3(), this.time);
     this.smoke?.update(dt, this.rig.camera);
     this.coins.update(dt);
+    if (this.solos.size) this.updateSolos(dt);
     this.markers.update(this.time);
     this.renderer.render(this.scene, this.rig.camera);
     this.lastStats = { calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles };

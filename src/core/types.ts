@@ -83,6 +83,8 @@ export interface RegionDef {
   government: {
     kind: GovernmentKind;
     name: string;
+    /** The landmark building where the government sits (the player spawns in front of it). */
+    seat: string;
     actionLabel: string;
     actionBlurb: string;
     electionEveryDays: number;
@@ -109,6 +111,9 @@ export interface RegionDef {
     vacancy: number; density: number; parks: number; seed: number;
   };
   unlockCost: number;
+  /** Licence premiums on opening specific businesses here (Neon Vale's street-vendor medallions):
+   *  multiplies the opening price (and so the lot's resale value), never wages or upgrades. */
+  licences?: Record<string, { mult: number; name: string }>;
 }
 
 export interface LotState {

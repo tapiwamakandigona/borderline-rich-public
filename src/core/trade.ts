@@ -9,7 +9,7 @@ import { next } from './rng';
 import { anchorPrice } from './state';
 import { notify } from './notify';
 import { money } from './format';
-import { FREE_PORT_CERT } from './mechanics';
+import { ENEMY_CUSTOMS, FREE_PORT_CERT, FRIEND_CUSTOMS, favour } from './mechanics';
 
 export const METHODS: { id: ShipMethod; name: string; blurb: string }[] = [
   { id: 'legal', name: 'Legal', blurb: 'Pay every tariff. Sleep at night.' },
@@ -52,6 +52,9 @@ export function quote(state: GameState, good: GoodId, qty: number, to: RegionId,
       risk = 0.1 + 0.45 * Ld.enforcement + heat / 200;
       break;
   }
+  // Customs at the destination go easy on friends of the ruling party and hard on its enemies.
+  const fav = favour(state, to);
+  if (fav) risk *= fav === 'friend' ? FRIEND_CUSTOMS : ENEMY_CUSTOMS;
   const bribeCost = bribe && method !== 'legal' ? value * 0.06 : 0;
   if (bribeCost > 0) risk *= 1 - 0.6 * REGION[to].economy.corruption;
   risk = Math.min(0.85, Math.max(0, risk));

@@ -20,6 +20,10 @@ const P: Record<Personality, { buy: number; npc: number; war: number; offer: num
   shady: { buy: 0.08, npc: 0.02, war: 0.03, offer: 0.02, sabotage: 0.025, reserve: 2.5 },
 };
 export const PRICE_WAR_MULT = 0.65;
+/** Rival offers and sabotage start this many seconds into a game. */
+export const RIVAL_EVENTS_AFTER = 600;
+/** Rivals only bid for businesses worth at least this much (× the region's cost index). */
+export const OFFER_MIN_VALUE = 4000;
 export const PRICE_WAR_SECS = 120;
 
 export const rivalDef = (id: string): RivalDef => {
@@ -115,13 +119,14 @@ export function rivalAct(state: GameState, rivalId: string): void {
       r.cash -= Math.min(r.cash * 0.02, 50_000);
       r.lastAction = `Price war on ${tg.cat} in ${dname}.`;
       state.rev++;
-      notify(state, `${def.name} slashed prices: your ${tg.cat} income in ${dname} is −35 % for 2 min. Buy them out of the district to stop it.`, 'rival');
+      notify(state, `${def.name} slashed prices: your ${tg.cat} income in ${dname} is −35 % for 2 min. Buy out their ${tg.cat} business${theirCount(state, regionId, rivalId, tg.district, tg.cat) > 1 ? 'es' : ''} in ${dname} to end it.`, 'rival');
       return;
     }
   }
-  // 4) Offer to buy one of the player's businesses (resolved through the event system).
-  if (roll < (acc += p.offer) && !state.pendingEvent && rs.unlocked) {
-    const mine = city.lots.filter((d) => rs.lots[d.id].owner === 'player' && rs.lots[d.id].biz);
+  // 4) Offer to buy one of the player's businesses (resolved through the event system). Rivals
+  //    don't bother with a street cart, and give a newcomer ten minutes first (critic #14).
+  if (roll < (acc += p.offer) && !state.pendingEvent && rs.unlocked && state.t >= RIVAL_EVENTS_AFTER) {
+    const mine = city.lots.filter((d) => rs.lots[d.id].owner === 'player' && rs.lots[d.id].biz && lotValue(state, regionId, d.id) >= OFFER_MIN_VALUE * REGION[regionId].economy.costIndex);
     if (mine.length) {
       const d = pick(state, mine);
       const price = Math.round(lotValue(state, regionId, d.id) * range(state, 1.4, 1.9));
@@ -133,7 +138,7 @@ export function rivalAct(state: GameState, rivalId: string): void {
     }
   }
   // 5) Sabotage (shady rivals only).
-  if (roll < (acc += p.sabotage) && !state.pendingEvent && rs.unlocked) {
+  if (roll < (acc += p.sabotage) && !state.pendingEvent && rs.unlocked && state.t >= RIVAL_EVENTS_AFTER) {
     const mine = city.lots.filter((d) => rs.lots[d.id].owner === 'player' && rs.lots[d.id].biz);
     if (mine.length) {
       const d = pick(state, mine);
@@ -209,6 +214,12 @@ export function npcChurn(state: GameState): void {
   }
 }
 
+/** How many businesses of a category a rival runs in a district. */
+function theirCount(state: GameState, regionId: RegionId, rivalId: string, district: string, cat: string): number {
+  const rs = state.regions[regionId];
+  return getCity(regionId).lots.filter((o) => o.district === district && rs.lots[o.id].owner === rivalId && rs.lots[o.id].biz && BIZ[rs.lots[o.id].biz!].category === cat).length;
+}
+
 export function buyRivalLot(state: GameState, regionId: RegionId, lotId: string): ActionResult {
   const rs = state.regions[regionId];
   const ls = rs.lots[lotId];
@@ -225,6 +236,11 @@ export function buyRivalLot(state: GameState, regionId: RegionId, lotId: string)
   state.stats.rivalLotsBought++;
   state.rev++;
   notify(state, `You bought ${BIZ[ls.biz!].name} from ${rivalDef(r.id).name} for ${money(price)}.`, 'good');
+  // A price war needs a rival shop in that district + category: buying them out of it ends the war.
+  const n0 = state.buffs.length;
+  state.buffs = state.buffs.filter((b) => !(b.id.startsWith(`war:${r.id}:`) && b.regionId === regionId && b.districtId && b.category &&
+    theirCount(state, regionId, r.id, b.districtId, b.category) === 0));
+  if (state.buffs.length < n0) notify(state, `Price war over: ${rivalDef(r.id).name} has nothing left to undercut you with there.`, 'good');
   return { ok: true };
 }
 

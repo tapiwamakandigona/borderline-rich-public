@@ -23,8 +23,10 @@ export function landPrice(state: GameState, regionId: RegionId, lot: LotDef): nu
   const d = REGION[regionId].districts.find((x) => x.id === lot.district)!;
   return Math.round(FOOTPRINT_LAND[lot.footprint] * costIndex(regionId) * d.land * laws(state, regionId).costMod);
 }
+/** Licence premium on opening `bizId` in a region (Neon Vale's vendor medallions); 1 when none. */
+export const licenceMult = (regionId: RegionId, bizId: string) => REGION[regionId].licences?.[bizId]?.mult ?? 1;
 export const bizCost = (state: GameState, regionId: RegionId, b: BusinessDef) =>
-  Math.round(b.baseCost * costIndex(regionId) * laws(state, regionId).costMod);
+  Math.round(b.baseCost * licenceMult(regionId, b.id) * costIndex(regionId) * laws(state, regionId).costMod);
 
 /** Cost to go from `level` to `level + 1`. */
 export const upgradeCost = (state: GameState, regionId: RegionId, b: BusinessDef, level: number) =>

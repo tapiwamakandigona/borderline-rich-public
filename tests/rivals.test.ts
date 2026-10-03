@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { newGame } from '../src/core/state';
-import { acquireRival, buyRivalLot, canAcquire, richList, rivalAct, PRICE_WAR_MULT } from '../src/core/rivals';
+import { acquireRival, buyRivalLot, canAcquire, richList, rivalAct, OFFER_MIN_VALUE, PRICE_WAR_MULT, RIVAL_EVENTS_AFTER } from '../src/core/rivals';
 import { derived, lotValue, rivalAsk, rivalNetWorth } from '../src/core/economy';
 import { getCity } from '../src/core/city';
 import { REGIONS } from '../src/core/data/regions';
@@ -70,6 +70,7 @@ describe('F8 rival companies and the Rich List', () => {
 
   it('rivals make offers for your businesses through the event system', () => {
     const s = newGame('verano', 3);
+    s.t = RIVAL_EVENTS_AFTER + 1; // rivals give a newcomer ten minutes before bidding (T10g)
     const lot = getCity('verano').lots.find((d) => s.regions.verano.lots[d.id].owner === 'vacant')!;
     Object.assign(s.regions.verano.lots[lot.id], { owner: 'player', biz: 'cafe', level: 4 });
     let i = 0;
@@ -86,4 +87,55 @@ describe('F8 rival companies and the Rich List', () => {
     for (let i = 1; i < list.length; i++) expect(list[i - 1].netWorth).toBeGreaterThanOrEqual(list[i].netWorth);
     expect(list[list.length - 1].isPlayer).toBe(true);
   });
+
+  it('buying the rival out of the district ends their price war (as the toast says)', () => {
+    const s = newGame('solenne', 3);
+    const city = getCity('solenne');
+    const district = 'dockyards';
+    for (const d of city.lots) if (d.district === district && s.regions.solenne.lots[d.id].owner === 'vance') Object.assign(s.regions.solenne.lots[d.id], { owner: 'npc' });
+    const [theirs, mineDef] = city.lots.filter((d) => d.district === district && !d.civic).slice(0, 2);
+    Object.assign(s.regions.solenne.lots[theirs.id], { owner: 'vance', biz: 'freight', level: 5, manager: true });
+    Object.assign(s.regions.solenne.lots[mineDef.id], { owner: 'player', biz: 'freight', level: 3, manager: true });
+    s.rev++;
+    const before = derived(s, true).lots.solenne[mineDef.id].net;
+    let i = 0;
+    while (!s.buffs.some((b) => b.id.startsWith('war:vance')) && i++ < 2000) { s.pendingEvent = null; rivalAct(s, 'vance'); }
+    expect(s.buffs.some((b) => b.id.startsWith('war:vance'))).toBe(true);
+    expect(s.notices.at(-1)!.text).toContain('Buy out their logistics business in Dockyards');
+    s.cash = 1e9;
+    expect(buyRivalLot(s, 'solenne', theirs.id).ok).toBe(true);
+    expect(s.buffs.some((b) => b.id.startsWith('war:vance'))).toBe(false);
+    expect(s.notices.some((n) => n.text.startsWith('Price war over'))).toBe(true);
+    s.rev++;
+    expect(derived(s, true).lots.solenne[mineDef.id].net).toBeGreaterThan(before * 0.99);
+  });
+
+  it('rivals neither bid nor sabotage in the first ten minutes, and never bid for a street cart', () => {
+    const pendingId = (s: GameState): string => s.pendingEvent?.defId ?? '';
+    for (const r of ['verano', 'redmesa', 'solenne'] as const) {
+      const s = newGame(r, 4);
+      const [cartLot, bigLot] = getCity(r).lots.filter((d) => s.regions[r].lots[d.id].owner === 'vacant' && !d.civic);
+      Object.assign(s.regions[r].lots[cartLot.id], { owner: 'player', biz: 'cart', level: 1 });
+      Object.assign(s.regions[r].lots[bigLot.id], { owner: 'player', biz: 'freight', level: 10, manager: true });
+      s.rev++;
+      expect(lotValue(s, r, bigLot.id)).toBeGreaterThan(OFFER_MIN_VALUE * 2);
+      const ids = Object.keys(s.rivals).filter((id) => s.rivals[id].regionId === r);
+      const act = (n: number): Set<string> => {
+        const seen = new Set<string>();
+        for (let k = 0; k < n; k++) { for (const id of ids) s.rivals[id].cash = 1e9; s.pendingEvent = null; rivalAct(s, ids[k % ids.length]); seen.add(pendingId(s)); }
+        return seen;
+      };
+      // Before ten minutes: a juicy target, bottomless rival pockets, and still no bid or sabotage.
+      const early = act(3000);
+      expect(early.has('rival_offer') || early.has('sabotage'), r).toBe(false);
+      // After ten minutes the same target draws bids, so it was the clock that held them back.
+      s.t = RIVAL_EVENTS_AFTER + 1;
+      expect(act(3000).has('rival_offer'), r).toBe(true);
+      // A street cart on its own is beneath them.
+      Object.assign(s.regions[r].lots[bigLot.id], { owner: 'vacant', biz: null, level: 0, manager: false });
+      s.rev++;
+      expect(act(3000).has('rival_offer'), r).toBe(false);
+    }
+  });
 });
+

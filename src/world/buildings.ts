@@ -14,6 +14,18 @@ const BAY = 3.2;
 const TILE: [number, number] = [BAY * 4, FLOOR * 4];
 
 export interface LotVisual { top: number; box: THREE.Box3; center: THREE.Vector3; }
+
+/** Visual growth stages (critic #12): a business's look changes at each of these levels, so an
+ *  upgrade is visible long before the old every-10-levels floor bump. */
+export const LEVEL_STAGES = [1, 3, 5, 10, 25, 50, 100, 200];
+/** Extra floors from growth: +1 at L10, then one more at every later stage (geometry only ever
+ *  changes when levelBand() changes, so the world knows exactly when to rebuild). */
+const growthFloors = (level: number) => Math.max(0, levelBand(level) - 2);
+export function levelBand(level: number): number {
+  let b = 0;
+  for (let i = 0; i < LEVEL_STAGES.length; i++) if (level >= LEVEL_STAGES[i]) b = i;
+  return b;
+}
 export interface BuildOutput { lots: Map<string, LotVisual>; chimneys: THREE.Vector3[]; }
 
 const ROT: Record<Side, number> = { s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 };
@@ -32,7 +44,7 @@ function toWorld(ctx: Ctx, x: number, y: number, z: number): THREE.Vector3 {
 function floorsFor(tier: number, level: number, fp: LotDef['footprint'], theme: Theme, r: RngHolder): number {
   const base = [0, 1, 2, 3.4, 6, 13][tier];
   const max = { small: 4, medium: 9, large: 16, tower: 44 }[fp];
-  const f = Math.round(base * theme.heightMult * (0.8 + next(r) * 0.45)) + Math.floor(level / 10);
+  const f = Math.round(base * theme.heightMult * (0.8 + next(r) * 0.45)) + growthFloors(level);
   return Math.max(1, Math.min(max, f));
 }
 
@@ -190,7 +202,7 @@ function tower(ctx: Ctx, floors: number, cat: string, classical = false): number
 function industrial(ctx: Ctx, tier: number, level: number): number {
   const { gb, theme, r, lw, ld } = ctx;
   const bw = Math.max(5, lw - 2), bd = Math.max(5, ld - 3);
-  const H = GROUND * (tier >= 4 ? 1.9 : 1.4) + Math.min(6, Math.floor(level / 10)) * 1.2;
+  const H = GROUND * (tier >= 4 ? 1.9 : 1.4) + growthFloors(level) * 1.2;
   const wall = theme.id === 'ironhold' ? pick(r, theme.walls.slice(0, 3)) : pick(r, theme.walls);
   gb.box('upper', bw, H, bd, 0, 0.1, -0.5, wall, { tile: [BAY * 4, FLOOR * 5] });
   for (let i = 0; i < Math.max(1, Math.floor(bw / 5)); i++) gb.box('plain', 3.0, 3.6, 0.25, -bw / 2 + 2.5 + i * 5, 0.1, bd / 2 - 0.4, 0x3a3f46);
@@ -421,24 +433,148 @@ function oilWell(ctx: Ctx): number {
   return 14.5;
 }
 
-function cityHall(ctx: Ctx): number {
-  const { gb, lw, ld, theme } = ctx;
-  const bw = lw - 1.5, bd = ld - 3;
-  const stone = theme.id === 'ironhold' ? 0xb9b2a6 : theme.id === 'neonvale' ? 0xc9ced8 : 0xf3eee4;
-  for (let k = 0; k < 3; k++) gb.box('plain', bw + 2 - k * 0.6, 0.35, bd + 3 - k * 0.6, 0, k * 0.35, 0.4, 0xd8d1c3);
-  gb.box('upper', bw, GROUND + FLOOR * 1.5, bd, 0, 1.05, -0.4, stone, { tile: TILE });
-  const n = 6;
-  for (let i = 0; i < n; i++) gb.cyl('plain', 0.5, 0.55, GROUND + FLOOR * 1.5, -bw * 0.4 + (i * bw * 0.8) / (n - 1), 1.05, bd / 2 + 0.6, 0xffffff, 10);
-  gb.box('plain', bw * 0.9, 0.7, 2.4, 0, GROUND + FLOOR * 1.5 + 1.05, bd / 2 + 0.2, 0xffffff);
-  gb.gable('plain', bw * 0.9, 2.2, 2.4, 0, GROUND + FLOOR * 1.5 + 1.75, bd / 2 + 0.2, 0xf6f2ea, 0);
-  const H = GROUND + FLOOR * 1.5 + 1.05;
-  gb.box('plain', bw + 0.4, 0.5, bd + 0.4, 0, H, -0.4, 0xe6dfd0);
-  gb.cyl('plain', 3.2, 3.4, 3, 0, H + 0.5, -0.4, stone, 16);
-  gb.sphere('plain', 3.3, 0, H + 3.5, -0.4, theme.id === 'solenne' || theme.id === 'verano' ? 0x2a6fa8 : 0x5f8f86, true);
-  gb.cyl('plain', 0.12, 0.12, 4, 0, H + 6.6, -0.4, 0xd4af37, 6);
-  gb.sphere('plain', 0.4, 0, H + 10.8, -0.4, 0xf2c14e);
-  return H + 11;
+// ── Seats of power: every region's spawn point faces its own landmark (critic #6a) ─────────────
+function hallSolenne(ctx: Ctx): number { // merchant palazzo with an arcaded loggia + campanile
+  const { gb, lw, ld } = ctx;
+  const stone = 0xf1e4cc, trim = 0xffffff, terracotta = 0xc8553d;
+  const bw = lw - 6, bd = ld - 5, x0 = -2;
+  gb.box('plain', bw + 1.5, 0.4, bd + 2.5, x0, 0, 0.6, 0xd8cdb8);
+  const H0 = 4.6;
+  gb.box('plain', bw - 0.4, H0, bd - 1.6, x0, 0.4, -0.8, 0x6b5a48);
+  const n = 5;
+  for (let i = 0; i <= n; i++) gb.box('plain', 0.8, H0, 1.0, x0 - bw / 2 + 0.4 + (i * (bw - 0.8)) / n, 0.4, bd / 2 - 0.5, stone);
+  gb.box('plain', bw, 1.0, 1.1, x0, 0.4 + H0 - 1.0, bd / 2 - 0.5, stone);
+  gb.box('upper', bw, FLOOR * 2, bd, x0, 0.4 + H0, 0, stone, { tile: TILE });
+  const top = 0.4 + H0 + FLOOR * 2;
+  gb.box('plain', bw + 0.8, 0.5, bd + 0.8, x0, top, 0, trim);
+  gb.hip('plain', bw + 1, 2.6, bd + 1, x0, top + 0.5, 0, terracotta);
+  for (const sx of [-1, 1]) {
+    gb.cyl('plain', 0.07, 0.07, 6, x0 + sx * 3, top, bd / 2 + 0.3, 0xdddddd, 5);
+    gb.box('plain', 1.7, 1.0, 0.06, x0 + sx * 3 + 0.85, top + 4.8, bd / 2 + 0.3, sx < 0 ? 0x1f8a8a : 0xc8553d);
+  }
+  const cx = lw / 2 - 2.3, cz = -ld / 2 + 2.5, tw = 3.4, th = 22;
+  gb.box('upper', tw, th, tw, cx, 0.2, cz, 0xe9d7b8, { tile: TILE });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gb.box('plain', 0.6, 3.2, 0.6, cx + sx * (tw / 2 - 0.3), 0.2 + th, cz + sz * (tw / 2 - 0.3), stone);
+  gb.sphere('plain', 0.75, cx, 0.2 + th + 0.9, cz, 0xc9a227);
+  gb.box('plain', tw + 0.5, 0.45, tw + 0.5, cx, 0.2 + th + 3.2, cz, trim);
+  gb.hip('plain', tw + 0.5, 4.2, tw + 0.5, cx, 0.2 + th + 3.65, cz, terracotta);
+  gb.cyl('plain', 0.08, 0.08, 2.2, cx, 0.2 + th + 7.8, cz, 0xd4af37, 5);
+  return 0.2 + th + 10;
 }
+
+function hallRedMesa(ctx: Ctx): number { // adobe territorial courthouse with a bell gable + water tower
+  const { gb, lw, ld } = ctx;
+  const adobe = 0xd9a066, dark = 0xc0844e, wood = 0x6b4a35;
+  const bw = lw - 6.5, bd = ld - 6, x0 = -2.4, z0 = -0.8;
+  gb.box('upper', bw, FLOOR * 2 + 1, bd, x0, 0.1, z0, adobe, { tile: TILE });
+  const H = 0.1 + FLOOR * 2 + 1;
+  gb.box('plain', bw + 0.3, 0.8, 0.5, x0, H, z0 + bd / 2, dark);
+  gb.box('plain', bw + 0.3, 0.8, 0.5, x0, H, z0 - bd / 2, dark);
+  for (const sx of [-1, 1]) gb.box('plain', 0.5, 0.8, bd, x0 + sx * bw / 2, H, z0, dark);
+  for (let i = 0; i < 8; i++) gb.cyl('plain', 0.15, 0.15, 1.0, x0 - bw / 2 + 0.9 + (i * (bw - 1.8)) / 7, H - 0.75, z0 + bd / 2 - 0.2, wood, 6, Math.PI / 2);
+  const gz = z0 + bd / 2 - 0.2;
+  gb.box('plain', 6.6, 3.2, 0.9, x0, H, gz, adobe);
+  gb.box('plain', 4.4, 2.4, 0.9, x0, H + 3.2, gz, adobe);
+  gb.box('plain', 2.2, 1.6, 0.9, x0, H + 5.6, gz, adobe);
+  gb.box('plain', 1.3, 1.5, 1.0, x0, H + 3.5, gz, 0x3a2a1a);
+  gb.sphere('plain', 0.5, x0, H + 3.7, gz, 0xc9a227);
+  gb.box('plain', bw + 0.6, 0.3, 3.0, x0, 3.4, z0 + bd / 2 + 1.5, wood);
+  for (let i = 0; i < 6; i++) gb.box('plain', 0.35, 3.3, 0.35, x0 - bw / 2 + 0.3 + (i * (bw - 0.6)) / 5, 0.1, z0 + bd / 2 + 2.8, 0x8a6a42);
+  const tx = lw / 2 - 2.3, tz = -ld / 2 + 2.6;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gb.box('plain', 0.3, 9.4, 0.3, tx + sx * 1.3, 0.1, tz + sz * 1.3, wood, { rz: -sx * 0.05, rx: sz * 0.05 });
+  gb.box('plain', 3.2, 0.25, 3.2, tx, 9.4, tz, wood);
+  gb.cyl('plain', 1.9, 1.9, 3.2, tx, 9.65, tz, 0x9c7a5a, 14);
+  gb.add('plain', new THREE.ConeGeometry(2.1, 1.5, 14), 0x6b4a35, tx, 13.6, tz);
+  return 14.5;
+}
+
+function hallNeonVale(ctx: Ctx): number { // glass civic tower with floating holo-rings and a podium screen
+  const { gb, lw, ld } = ctx;
+  gb.box('plain', lw - 2, 4.5, ld - 4, 0, 0.1, -0.5, 0x2b2f3a);
+  gb.box('glow', lw - 1.9, 0.25, ld - 3.9, 0, 4.6, -0.5, 0x3df2ff);
+  const tw = 8, td = 7, th = 34, base = 4.85;
+  gb.box('glass', tw, th, td, 0, base, -1.2, 0x8fb0c8, { tile: TILE });
+  for (const sx of [-1, 1]) gb.box('plain', 0.5, th + 3, 0.5, sx * (tw / 2 + 0.1), base, td / 2 - 1.1, 0xdfe7ef);
+  gb.box('plain', tw + 0.6, 1.2, td + 0.6, 0, base + th, -1.2, 0x14161b);
+  gb.add('glow', new THREE.TorusGeometry(5.4, 0.22, 6, 40), 0xff3e9a, 0, base + th + 4.6, -1.2, Math.PI / 2, 0, 0);
+  gb.add('glow', new THREE.TorusGeometry(3.9, 0.16, 6, 32), 0x3df2ff, 0, base + th + 6.2, -1.2, Math.PI / 2, 0, 0);
+  gb.cyl('plain', 0.12, 0.2, 7, 0, base + th + 1.2, -1.2, 0xdddddd, 6);
+  gb.sphere('glow', 0.35, 0, base + th + 8.4, -1.2, 0xff3e9a);
+  gb.box('plain', 7.4, 3.4, 0.3, 0, 0.6, ld / 2 - 2.6, 0x14161b);
+  gb.box('glow', 7.0, 3.0, 0.1, 0, 0.8, ld / 2 - 2.42, 0x2bb7d9);
+  gb.box('glow', 4.6, 0.5, 0.12, 0, 2.6, ld / 2 - 2.38, 0xf4efe6);
+  return base + th + 8.8;
+}
+
+function hallAmberfield(ctx: Ctx): number { // red county hall with a white portico, clock cupola + grain silo
+  const { gb, lw, ld } = ctx;
+  const red = 0xa63a2b, white = 0xf6f2ea;
+  const bw = lw - 7, bd = ld - 7, x0 = -2.4, z0 = -1;
+  gb.box('upper', bw, FLOOR * 2, bd, x0, 0.1, z0, red, { tile: TILE });
+  const H = 0.1 + FLOOR * 2;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gb.box('plain', 0.4, H, 0.4, x0 + sx * bw / 2, 0, z0 + sz * bd / 2, white);
+  gb.gable('plain', bw + 0.8, 3.4, bd + 1.0, x0, H, z0, 0x5a5550);
+  const pz = z0 + bd / 2 + 1.3;
+  for (let i = 0; i < 4; i++) gb.cyl('plain', 0.3, 0.34, H - 0.2, x0 - 2.4 + i * 1.6, 0.1, pz + 0.6, white, 10);
+  gb.box('plain', 6.4, 0.5, 2.6, x0, H - 0.2, pz, white);
+  gb.gable('plain', 2.6, 1.5, 6.4, x0, H + 0.3, pz, white, Math.PI / 2);
+  gb.cyl('plain', 1.2, 1.2, 2.2, x0, H + 2.9, z0, white, 8);
+  gb.cyl('plain', 0.62, 0.62, 0.12, x0, H + 3.9, z0 + 1.2, 0x14161b, 16, Math.PI / 2);
+  gb.sphere('plain', 1.25, x0, H + 5.1, z0, 0x5f8f86, true);
+  gb.cyl('plain', 0.06, 0.06, 1.6, x0, H + 6.3, z0, 0xd4af37, 5);
+  const sx = lw / 2 - 2.4, sz = -ld / 2 + 2.6;
+  gb.cyl('plain', 2.0, 2.0, 11, sx, 0.1, sz, 0xd8d4cc, 16);
+  for (let k = 0; k < 5; k++) gb.cyl('plain', 2.06, 2.06, 0.2, sx, 1.8 + k * 2.1, sz, 0x9aa0a6, 16);
+  gb.sphere('plain', 2.0, sx, 11.1, sz, 0xbfc5cb, true);
+  for (let k = 0; k < 3; k++) gb.cyl('plain', 0.7, 0.7, 1.3, lw / 2 - 2.0, 0.1, ld / 2 - 2.0 - k * 1.5, 0xe2c26a, 12, Math.PI / 2);
+  return 13.4;
+}
+
+function hallVerano(ctx: Ctx): number { // pastel island assembly: white arcade + clock tower with a turquoise dome
+  const { gb, lw, ld } = ctx;
+  const pink = 0xf6b1c3, turq = 0x2ec4c9, white = 0xffffff;
+  const bw = lw - 2.5, bd = ld - 5.5, z0 = -0.8;
+  gb.box('upper', bw, FLOOR * 2 + 0.6, bd, 0, 0.1, z0, pink, { tile: TILE });
+  const H = 0.1 + FLOOR * 2 + 0.6;
+  for (let i = 0; i < 7; i++) gb.cyl('plain', 0.32, 0.36, 4.0, -bw / 2 + 0.6 + (i * (bw - 1.2)) / 6, 0.1, z0 + bd / 2 + 1.5, white, 10);
+  gb.box('plain', bw, 0.6, 2.3, 0, 4.1, z0 + bd / 2 + 1.0, white);
+  gb.box('plain', bw + 0.5, 0.5, bd + 0.5, 0, H, z0, white);
+  const tH = 9, tz = z0 - 0.4;
+  gb.box('upper', 4.2, tH, 4.2, 0, H + 0.5, tz, 0xfbe3b0, { tile: TILE });
+  gb.cyl('plain', 0.95, 0.95, 0.15, 0, H + 0.5 + tH - 2.2, tz + 2.12, white, 16, Math.PI / 2);
+  gb.box('plain', 4.8, 0.5, 4.8, 0, H + 0.5 + tH, tz, white);
+  gb.sphere('plain', 2.3, 0, H + 1.0 + tH, tz, turq, true, 1.25);
+  gb.cyl('plain', 0.08, 0.08, 2, 0, H + 1.0 + tH + 2.8, tz, 0xd4af37, 5);
+  for (const sx of [-1, 1]) { gb.box('plain', 1.4, 0.8, 1.4, sx * (bw / 2 - 0.4), 0.1, ld / 2 - 0.9, white); gb.sphere('plain', 0.9, sx * (bw / 2 - 0.4), 0.9, ld / 2 - 0.9, 0x4fa055); }
+  return H + 1 + tH + 4.8;
+}
+
+function hallIronhold(ctx: Ctx): number { // brick Workers' Diet with a slate roof and a glowing clock tower
+  const { gb, lw, ld } = ctx;
+  const brick = 0x8a3b2c, stone = 0xb9b2a6, slate = 0x3a4048;
+  const bw = lw - 6.5, bd = ld - 5, x0 = -2.6, z0 = -0.4;
+  gb.box('upper', bw, FLOOR * 2.4, bd, x0, 0.1, z0, brick, { tile: TILE });
+  const H = 0.1 + FLOOR * 2.4;
+  gb.box('plain', bw + 0.3, 1.0, bd + 0.3, x0, 0.1, z0, stone);
+  gb.box('plain', bw + 0.6, 0.5, bd + 0.6, x0, H, z0, stone);
+  gb.gable('plain', bw + 0.8, 4.2, bd + 0.8, x0, H + 0.5, z0, slate);
+  for (const sx of [-1, 1]) {
+    gb.box('plain', 0.9, 3.4, 0.9, x0 + sx * bw * 0.3, H + 1.5, z0 - bd * 0.22, brick);
+    ctx.chimneys.push(toWorld(ctx, x0 + sx * bw * 0.3, H + 5.1, z0 - bd * 0.22));
+  }
+  const cx = lw / 2 - 2.5, cz = ld / 2 - 3.4, tw = 3.6, th = 20;
+  gb.box('upper', tw, th, tw, cx, 0.1, cz, 0x7a3328, { tile: TILE });
+  gb.box('plain', tw + 0.5, 0.5, tw + 0.5, cx, 0.1 + th, cz, stone);
+  gb.box('plain', tw, 3.2, tw, cx, 0.6 + th, cz, stone);
+  gb.cyl('glow', 1.15, 1.15, 0.12, cx, 0.6 + th + 1.6, cz + tw / 2 + 0.02, 0xfff3c4, 20, Math.PI / 2);
+  gb.hip('plain', tw + 0.4, 6.5, tw + 0.4, cx, 0.6 + th + 3.2, cz, slate);
+  gb.cyl('plain', 0.08, 0.08, 2.2, cx, 0.6 + th + 9.7, cz, 0xd4af37, 5);
+  return 0.6 + th + 11.9;
+}
+
+const HALLS: Record<RegionId, (ctx: Ctx) => number> = {
+  solenne: hallSolenne, redmesa: hallRedMesa, neonvale: hallNeonVale, amberfield: hallAmberfield, verano: hallVerano, ironhold: hallIronhold,
+};
 
 function customs(ctx: Ctx): number {
   const { gb, lw, ld, theme } = ctx;
@@ -494,7 +630,46 @@ function vacant(ctx: Ctx): number {
   return 1;
 }
 
+/** Props that accumulate as a business levels up, placed along the lot's front edge so they never
+ *  clip the building: planters → lit sign → string lights → gold kerb → billboard → statue. */
+function growthProps(ctx: Ctx, level: number, accent: number): void {
+  const band = levelBand(level);
+  if (band < 1) return;
+  const { gb, lw, ld, theme } = ctx;
+  const fz = ld / 2 - 0.9, ex = lw / 2 - 1.0;
+  for (const sx of [-1, 1]) {
+    gb.box('plain', 1.0, 0.6, 1.0, sx * ex, 0.1, fz, 0x9a8f80);
+    gb.sphere('plain', 0.62, sx * ex, 0.75, fz, theme.treeColors[0] ?? 0x4fa055);
+  }
+  if (band >= 2) {
+    gb.cyl('plain', 0.08, 0.08, 3.6, ex - 0.2, 0.1, fz - 1.1, 0x555b66, 5);
+    gb.box('glow', 0.18, 1.2, 1.5, ex - 0.2, 2.6, fz - 1.1, accent);
+  }
+  if (band >= 3) for (let i = 0; i < 7; i++) gb.sphere('glow', 0.13, -ex + 0.9 + (i * (2 * ex - 1.8)) / 6, 2.5 - Math.sin((i / 6) * Math.PI) * 0.45, fz + 0.2, i % 2 ? 0xfff3c4 : accent);
+  if (band >= 4) {
+    gb.box('plain', lw - 0.6, 0.22, 0.25, 0, 0.1, ld / 2 - 0.25, 0xd4af37);
+    gb.box('plain', 0.25, 0.22, ld - 0.6, -lw / 2 + 0.25, 0.1, 0, 0xd4af37);
+    gb.box('plain', 0.25, 0.22, ld - 0.6, lw / 2 - 0.25, 0.1, 0, 0xd4af37);
+  }
+  if (band >= 5) {
+    for (const sx of [-1, 1]) gb.box('plain', 0.2, 5.2, 0.2, -ex + 0.6 + sx * 1.4, 0.1, fz - 1.3, 0x444a55);
+    gb.box('plain', 3.6, 1.8, 0.2, -ex + 0.6, 4.0, fz - 1.3, 0x14161b);
+    gb.box('glow', 3.3, 1.5, 0.08, -ex + 0.6, 4.15, fz - 1.18, accent);
+  }
+  if (band >= 6) {
+    gb.cyl('plain', 0.7, 0.8, 0.9, 0, 0.1, fz, 0xd8d1c3, 10);
+    gb.sphere('plain', 0.5, 0, 1.5, fz, 0xf2c14e);
+    gb.cyl('plain', 0.25, 0.32, 0.9, 0, 1.0, fz, 0xf2c14e, 8);
+  }
+}
+
 function business(ctx: Ctx, ls: LotState, fp: LotDef['footprint']): number {
+  const top = businessBody(ctx, ls, fp);
+  growthProps(ctx, ls.level, CATEGORY_ACCENT[BIZ[ls.biz!].category]);
+  return top;
+}
+
+function businessBody(ctx: Ctx, ls: LotState, fp: LotDef['footprint']): number {
   const b = BIZ[ls.biz!];
   const { theme, r } = ctx;
   if (b.tier === 1) return stall(ctx, b.id);
@@ -523,7 +698,7 @@ export function buildLots(gb: GeoBuilder, layout: CityLayout, lots: Record<strin
     gb.setFrame(def.x, def.z, ROT[def.facing]);
     gb.box('plain', ctx.lw - 0.2, 0.14, ctx.ld - 0.2, 0, 0, 0, theme.lotGround);
     let top: number;
-    if (def.civic === 'cityhall') top = cityHall(ctx);
+    if (def.civic === 'cityhall') top = HALLS[ctx.region](ctx);
     else if (def.civic === 'customs') top = customs(ctx);
     else if (!ls || ls.owner === 'vacant' || !ls.biz) top = lots ? vacant(ctx) : business(ctx, { owner: 'npc', biz: showcaseBiz(def, r), level: 1 + Math.floor(next(r) * 30), till: 0, manager: false, invested: 0, permitUntil: 0, frozenUntil: 0 }, def.footprint);
     else top = business(ctx, ls, def.footprint);

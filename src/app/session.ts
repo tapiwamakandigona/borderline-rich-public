@@ -301,7 +301,7 @@ export class Session {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   /** Run a core action with feedback. Returns whether it succeeded. */
-  run(fn: (s: GameState) => ActionResult, fx: { sfx?: SfxName; lot?: string; coins?: number; shake?: number; toast?: string } = {}): boolean {
+  run(fn: (s: GameState) => ActionResult, fx: { sfx?: SfxName; lot?: string; coins?: number; shake?: number; toast?: string; pulse?: 'grow' | 'pop' } = {}): boolean {
     const s = this.state;
     if (!s) return false;
     const r = fn(s);
@@ -313,6 +313,7 @@ export class Session {
     this.sfx.play(fx.sfx ?? 'tap');
     if (fx.lot) {
       this.syncWorld();
+      if (!JUICE.reducedMotion) this.world.pulseLot(fx.lot, fx.pulse ?? 'pop');
       const v = this.world.lotVisual(fx.lot);
       if (v) this.burst(v.center.clone().setY(Math.min(v.top, 14)), fx.coins ?? JUICE.coins.buy);
     }

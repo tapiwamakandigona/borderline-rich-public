@@ -7,9 +7,11 @@ import { BIZ } from '../../core/data/businesses';
 import { laws, costIndex } from '../../core/laws';
 import { winChances, politicalAction, buyGuildSeat, guildSeatCost } from '../../core/politics';
 import {
-  bonusCost, buyInsurance, expeditePermit, insuranceCost, payUnionBonus, raiseVC, signWageDeal, toggleOffshore, vcAmount,
+  bonusCost, buyInsurance, expeditePermit, insuranceCost, payUnionBonus, raiseVC, signWageDeal, toggleOffshore, vcAmount, wageDealCost,
 } from '../../core/actions';
-import { coopActive, ownsBiz, permitWait, strikeActive, COOP_BONUS } from '../../core/mechanics';
+import {
+  coopActive, ownsBiz, permitWait, strikeActive, COOP_BONUS, favour, FRIEND_STANDING, ENEMY_STANDING, FRIEND_TAX, ENEMY_TAX, FRIEND_CUSTOMS, ENEMY_CUSTOMS,
+} from '../../core/mechanics';
 import { money, pct, duration } from '../../core/format';
 import type { GameState } from '../../core/types';
 
@@ -24,7 +26,7 @@ function Signature({ st }: { st: GameState }) {
       const pending = Object.entries(st.regions.redmesa.lots).filter(([, l]) => l.owner === 'player' && l.permitUntil > st.t);
       body = (
         <>
-          <p class="muted">New businesses wait ~{duration(permitWait(st))} for a permit (street stalls ~{duration(permitWait(st, 'cart'))}, Fuel Pumps none). Standing with the Governor's Circle halves it; an envelope skips it (+8 heat).</p>
+          <p class="muted">New businesses wait ~{duration(permitWait(st))} for a permit (street stalls ~{duration(permitWait(st, 'cart'))}, Fuel Pumps none). Standing 50+ with the Governor's Circle halves it, −25 or worse makes it 1.5× longer; an envelope skips it (+8 heat).</p>
           <p>Fuel index <b class="gold">×{st.regions.redmesa.vars.fuelIndex.toFixed(2)}</b> — energy businesses ride it.</p>
           {pending.map(([id, l]) => (
             <div key={id} class="permit"><span>{BIZ[l.biz!].name} · {duration(l.permitUntil - st.t)}</span>
@@ -68,7 +70,7 @@ function Signature({ st }: { st: GameState }) {
           <Bar value={v.unionMood} color={v.unionMood < 35 ? '#ff5a5f' : '#3ddc97'} />
           {strikeActive(st) && <p class="warn">STRIKE — industry and logistics earn nothing for {duration(v.strikeUntil - st.t)}.</p>}
           <div class="btn-row">
-            <Btn kind="mint" small onClick={() => s.run(signWageDeal, { sfx: 'buy' })}>Sign wage deal (+10 % wages)</Btn>
+            <Btn kind="mint" small testid="wage-deal" onClick={() => s.run(signWageDeal, { sfx: 'buy' })}>Wage deal +10 % wages · {money(wageDealCost(st))}</Btn>
             <Btn kind="ghost" small onClick={() => s.run(payUnionBonus, { sfx: 'cash' })}>Pay a bonus · {money(bonusCost(st))}</Btn>
           </div>
         </>
@@ -111,6 +113,16 @@ export function PoliticsSheet() {
         <div><span>Min. wage</span><b>×{L.minWage.toFixed(2)}</b></div>
       </div>
       {ruling && <p class="ruling" style={{ '--c': ruling.color } as Record<string, string>}>In power: <b>{ruling.name}</b> — {ruling.leader}</p>}
+      {ruling && (() => {
+        const f = favour(st, rid);
+        return (
+          <p class={`favour ${f ?? 'neutral'}`} data-testid="favour">
+            {f === 'friend' ? `You're a friend of the party in power: income tax ×${FRIEND_TAX}, customs checks ×${FRIEND_CUSTOMS} here.`
+              : f === 'enemy' ? `The party in power has it in for you: income tax ×${ENEMY_TAX}, customs checks ×${ENEMY_CUSTOMS} here.`
+              : `Standing ${FRIEND_STANDING}+ with the party in power: income tax ×${FRIEND_TAX} here. ${ENEMY_STANDING} or worse: ×${ENEMY_TAX}.`}
+          </p>
+        );
+      })()}
       <Signature st={st} />
       <h4 class="sub-h">{council ? 'Council blocs' : 'Factions'}</h4>
       {R.factions.map((f) => {

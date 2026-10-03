@@ -57,7 +57,7 @@ decrees are scheduled in days. The sim steps at a fixed 0.1 s.
 | Red Mesa Territory | Dustwater | ★★ Standard | Territorial Governor — **rigged elections** | Fuel Pump (energy) | **Permits & Favours**: every new business waits for a permit (street stalls wait less) except the Fuel Pump — or you bribe; boom/bust fuel index; poor customers |
 | Port Solenne | Solenne | ★★ Standard | Merchant Council — **permanent guild seats** | Crate Stall (logistics) | **Free Port**: legal exports carry a free-port certificate (import tariff cut); your logistics earn more per ship you have moving; 2 shipping slots from day one; imports tariff-free |
 | Ironhold | Ironhold | ★★★ Hard | Workers' Diet | Scrap Forge (industry) | **Union Mood**: falls as your industry grows; low mood → strikes stop industry & logistics; wage deals cost money |
-| Neon Vale | Neon Vale | ★★★★ Expert | City Council (3-day cycle) | Phone Repair Stall (tech) | **Hype Cycle**: tech/services ride a city-wide hype wave; VC term sheets; antitrust; most expensive city, low spend per customer |
+| Neon Vale | Neon Vale | ★★★★ Expert | City Council (3-day cycle) | Phone Repair Stall (tech) | **Hype Cycle**: tech/services ride a city-wide hype wave; VC term sheets; antitrust; most expensive city, low spend per customer; street carts need a vendor medallion (×2.5 to open), so phone repair is the local hustle |
 
 **Every number a player sees on a region card is generated** from the live rules by
 `src/core/pitch.ts` (`regionFacts`). The prose in `data/regions.ts` carries no multipliers or

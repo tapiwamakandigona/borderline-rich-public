@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { newGame } from '../src/core/state';
 import { EVENTS, EVENT } from '../src/core/data/events';
 import { REGIONS } from '../src/core/data/regions';
-import { eventScale, eventView, resolveEvent, trigger } from '../src/core/events';
+import { eventScale, eventView, maybeTriggerEvent, resolveEvent, trigger } from '../src/core/events';
 import { getCity } from '../src/core/city';
 import { runBot } from './helpers/bot';
+import { STARTER } from '../src/core/data/businesses';
+import type { GameState, RegionId } from '../src/core/types';
 
 describe('F9 events with risky choices', () => {
   it('has at least 8 global and 6 per-region events, all well-formed', () => {
@@ -80,4 +82,31 @@ describe('F9 events with risky choices', () => {
     const seen = Object.keys(s.eventsSeen).filter((id) => !EVENT[id].system || id !== 'raid');
     expect(seen.length).toBeGreaterThanOrEqual(6);
   });
+
+  it('the opening events are mostly the region\'s own, then the mix widens (critic #14)', () => {
+    // Sample the event picker directly: a fresh draw at minute 5 vs minute 25, 400 draws each.
+    const localShare = (r: RegionId, t: number): number => {
+      const s = newGame(r, 5);
+      const lot = getCity(r).lots.find((d) => s.regions[r].lots[d.id].owner === 'vacant' && !d.civic)!;
+      Object.assign(s.regions[r].lots[lot.id], { owner: 'player', biz: STARTER[r], level: 3 });
+      s.rev++;
+      let local = 0, n = 0;
+      for (let k = 0; k < 400; k++) {
+        s.t = t; s.nextEventAt = 0; s.pendingEvent = null; s.eventsSeen = {}; s.heat = 0;
+        maybeTriggerEvent(s);
+        const id = (s as GameState).pendingEvent?.defId;
+        if (!id) continue;
+        n++;
+        if (EVENT[id].region !== 'global') local++;
+      }
+      expect(n, r).toBeGreaterThan(300);
+      return local / n;
+    };
+    for (const R of REGIONS) {
+      const early = localShare(R.id, 300), late = localShare(R.id, 1500);
+      expect(early, R.id).toBeGreaterThanOrEqual(0.6);
+      expect(early, R.id).toBeGreaterThan(late + 0.1);
+    }
+  });
 });
+

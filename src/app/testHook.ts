@@ -48,6 +48,7 @@ export function installTestHook(s: Session): void {
     playerPos: () => ({ x: s.world.player.pos.x, z: s.world.player.pos.z }),
     camera: () => ({ azimuth: s.world.rig.azimuth, dist: s.world.rig.dist, polar: s.world.rig.polar }),
     stats: () => s.world.stats(),
+    pulsing: (lotId: string) => s.world.isPulsing(lotId),
     /** Change ONE lot's business and report what the world rebuilt (critic #5), vs a full rebuild. */
     rebuildProbe: () => {
       const st = s.state!;

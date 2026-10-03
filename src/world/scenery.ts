@@ -82,6 +82,39 @@ export interface SceneryHandles {
 }
 
 // ── Trees ─────────────────────────────────────────────────────────────────────
+/** A palm frond: a tapered leaf strip that arcs up then droops, folded into a shallow V along its
+ *  midrib, with a slightly lower underside layer so it reads (and casts shadows) from any angle.
+ *  Replaces the flat planks that read as propellers (critic #6b). Local +z = outward. */
+function frondGeometry(len: number, width: number, droop: number, segs = 4): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const ring = (t: number) => {
+    const z = t * len;
+    const y = 0.32 * len * t - droop * len * t * t;
+    const w = width * Math.sin(Math.PI * Math.min(1, 0.12 + t * 0.95)) * (1 - 0.45 * t) + 0.03;
+    return { z, y, w, fold: w * 0.4 };
+  };
+  for (const under of [0, 1]) {
+    const base = pos.length / 3;
+    for (let i = 0; i <= segs; i++) {
+      const { z, y, w, fold } = ring(i / segs);
+      const dy = under ? -0.05 : 0;
+      pos.push(-w, y - fold + dy, z, 0, y + dy, z, w, y - fold + dy, z);
+    }
+    for (let i = 0; i < segs; i++) {
+      const a = base + i * 3, b = base + (i + 1) * 3;
+      const quads = [[a, b, a + 1], [a + 1, b, b + 1], [a + 1, b + 1, a + 2], [a + 2, b + 1, b + 2]];
+      for (const [p, q, r] of quads) under ? idx.push(p, r, q) : idx.push(p, q, r);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2)); // merge-compatible
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g.toNonIndexed();
+}
+
 function treeGeometry(kind: Vegetation, snow: boolean): THREE.BufferGeometry {
   const gb = new GeoBuilder();
   const trunk = 0x6b4a35;
@@ -97,13 +130,15 @@ function treeGeometry(kind: Vegetation, snow: boolean): THREE.BufferGeometry {
         gb.cyl('plain', 0.2 - i * 0.012, 0.26 - i * 0.012, 1.5, x, y, 0, i % 2 ? 0x8a6a4a : 0x7a5a3c, 6, 0, -0.06 * i);
         x += Math.sin(0.06 * i) * 1.5; y += 1.45;
       }
-      for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2;
-        const g = new THREE.BoxGeometry(0.55, 0.06, 3.6);
-        g.translate(0, 0, 1.8);
-        gb.add('plain', g, k % 2 ? 0x3f8f4a : 0x4fa055, x, y, 0, 0.55, a, 0);
+      const fronds = 9;
+      for (let k = 0; k < fronds; k++) {
+        const a = (k / fronds) * Math.PI * 2 + (k % 2) * 0.18;
+        const len = 3.6 + (k % 3) * 0.45;
+        gb.add('plain', frondGeometry(len, 0.62, 0.62 + (k % 2) * 0.18), k % 3 === 0 ? 0x3f8f4a : k % 3 === 1 ? 0x4fa055 : 0x5aa85c, x, y + 0.05, 0, 0, a, 0);
       }
-      gb.sphere('plain', 0.28, x + 0.2, y - 0.2, 0.2, 0x5a3f2a);
+      // Coconut cluster: low-poly (20 tris each) — palms are instanced by the hundred and cast shadows,
+      // so every triangle here is paid for twice per palm per frame.
+      for (let k = 0; k < 3; k++) gb.add('plain', new THREE.IcosahedronGeometry(0.26, 0), 0x5a3f2a, x + Math.cos(k * 2.1) * 0.32, y - 0.25, Math.sin(k * 2.1) * 0.32);
       break;
     }
     case 'cactus':

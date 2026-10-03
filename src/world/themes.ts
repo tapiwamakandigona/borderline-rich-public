@@ -123,8 +123,9 @@ export const THEMES: Record<RegionId, Theme> = {
     sunColor: 0xfff6e0, duskSun: 0xff9c7a, sunIntensity: 2.9,
     hemi: { sky: 0xd2f1fb, ground: 0xe0cfa0, intensity: 1.2 },
     fogNear: 240, fogFar: 1000,
-    ground: 0xf0e2bd, groundAlt: 0xe5d3a6, lotGround: 0xf3e8cc, plaza: 0xf6eedb,
-    asphalt: 0x6a6763, roadLine: 0xffffff, sidewalk: 0xece0c6,
+    // Warm, saturated sand: the old #f0e2bd washed out to grey-white under the sun (critic #6f).
+    ground: 0xe2c48a, groundAlt: 0xd4b277, lotGround: 0xead5a8, plaza: 0xf0dfba,
+    asphalt: 0x6a6763, roadLine: 0xffffff, sidewalk: 0xe9d4ab,
     walls: [0xa8e6cf, 0xffb3c1, 0xffe29a, 0xbde0fe, 0xffd6a5, 0xcdb4db, 0xfdfcdc],
     roofs: [0xe76f51, 0xf4a261, 0xfafafa, 0xd65a3a],
     trims: [0xffffff],

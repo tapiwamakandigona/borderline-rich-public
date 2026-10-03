@@ -217,6 +217,8 @@ table.market { width: 100%; border-collapse: collapse; font-size: 12px; font-var
 .laws div { background: var(--ink2); border-radius: 12px; padding: 7px 9px; display: flex; flex-direction: column; font-size: 11.5px; color: var(--muted); }
 .laws b { font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--paper); }
 .ruling { border-left: 4px solid var(--c); padding-left: 10px; font-size: 13.5px; }
+.favour { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+.favour.friend { color: var(--mint); } .favour.enemy { color: #ff8a8d; }
 .faction { background: var(--ink2); border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--c); }
 .f-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .f-head .muted { font-size: 12px; }

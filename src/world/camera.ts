@@ -2,6 +2,11 @@
 // the region picker and trauma-based shake (camera only, never the UI).
 import * as THREE from 'three';
 
+/** Default follow framing (critic #6c): high enough that the roof in front of the camera doesn't
+ *  fill the screen, with the look point led ahead so the player sits in the lower-middle of a
+ *  portrait screen and you see the street ahead. */
+export const FOLLOW = { dist: 66, polar: 0.76, lead: 7 };
+
 export class CameraRig {
   readonly camera: THREE.PerspectiveCamera;
   mode: 'follow' | 'showcase' = 'showcase';
@@ -16,7 +21,7 @@ export class CameraRig {
   private t = 0;
 
   constructor(aspect: number) {
-    this.camera = new THREE.PerspectiveCamera(48, aspect, 0.5, 3000);
+    this.camera = new THREE.PerspectiveCamera(44, aspect, 0.5, 3000);
   }
 
   orbit(dx: number, dy: number): void {
@@ -38,7 +43,7 @@ export class CameraRig {
     this.resetView();
   }
   /** Default follow framing (distance + tilt). */
-  resetView(): void { this.dist = 64; this.polar = 0.92; }
+  resetView(): void { this.dist = FOLLOW.dist; this.polar = FOLLOW.polar; }
   /** Jump straight to the follow target (no easing), e.g. after a teleport. */
   snap(at: THREE.Vector3): void { this.target.copy(at); this.lookAt.copy(at); }
   /** Smoothly move the follow target to a point of interest (e.g. an event's building). */
@@ -60,17 +65,19 @@ export class CameraRig {
       c.position.set(this.center.x + Math.sin(this.azimuth) * r, y, this.center.z + Math.cos(this.azimuth) * r);
       c.lookAt(this.center.x, 6, this.center.z);
     } else {
-      const lead = vel ? new THREE.Vector3(vel.x, 0, vel.z).multiplyScalar(0.35) : new THREE.Vector3();
-      const want = player.clone().add(lead);
+      const velLead = vel ? new THREE.Vector3(vel.x, 0, vel.z).multiplyScalar(0.35) : new THREE.Vector3();
+      const want = player.clone().add(velLead);
       this.target.lerp(want, 1 - Math.exp(-dt * 5));
       this.lookAt.lerp(this.target, 1 - Math.exp(-dt * 8));
       const sp = Math.sin(this.polar), cp = Math.cos(this.polar);
+      const lead = FOLLOW.lead * (this.dist / FOLLOW.dist);
+      const lx = this.lookAt.x - Math.sin(this.azimuth) * lead, lz = this.lookAt.z - Math.cos(this.azimuth) * lead;
       c.position.set(
-        this.lookAt.x + Math.sin(this.azimuth) * sp * this.dist,
+        lx + Math.sin(this.azimuth) * sp * this.dist,
         this.lookAt.y + cp * this.dist + 1.5,
-        this.lookAt.z + Math.cos(this.azimuth) * sp * this.dist,
+        lz + Math.cos(this.azimuth) * sp * this.dist,
       );
-      c.lookAt(this.lookAt.x, this.lookAt.y + 1.5, this.lookAt.z);
+      c.lookAt(lx, this.lookAt.y + 1.5, lz);
     }
     if (this.trauma > 0) {
       const s = this.trauma * this.trauma * 0.8;

@@ -10,6 +10,7 @@ import {
   npcAsk, projectIncome, rivalAsk, sellPrice, tillCap, upgradeCostN,
 } from '../core/economy';
 import { permitWait } from '../core/mechanics';
+import { xf } from '../core/pitch';
 import { buyNpc, buyRivalLot, buyVacant, expeditePermit, hireManager, managerCost, sellLot, upgradeLot, vacantPrice } from '../core/actions';
 import { rivalDef } from '../core/rivals';
 import { money, perSec, duration } from '../core/format';
@@ -67,7 +68,7 @@ export function LotCard() {
     const hall = def.civic === 'cityhall';
     body = (
       <>
-        {header(hall ? 'City Hall' : 'Customs House', { text: hall ? R.government.name : 'Border control' })}
+        {header(hall ? R.government.seat : 'Customs House', { text: hall ? R.government.name : 'Border control' })}
         <p class="lot-blurb">{hall ? R.government.actionBlurb : 'Tariffs, inspections and paperwork. Ship cargo to other regions from here.'}</p>
         <Btn kind="gold" onClick={() => s.openSheet(hall ? 'politics' : 'trade')}>{hall ? 'Open Politics' : 'Open Trade'}</Btn>
       </>
@@ -85,14 +86,16 @@ export function LotCard() {
             const price = vacantPrice(st, rid, id, b.id);
             const f = fitLabel(st, rid, id, def.district, b.id);
             const wait = rid === 'redmesa' ? permitWait(st, b.id) : 0;
+            const lic = R.licences?.[b.id];
             const afford = st.cash >= price;
             return (
               <button key={b.id} class={`biz-opt${afford && near ? '' : ' dim'}`} data-testid={`build-${b.id}`} disabled={!near}
-                onClick={() => s.run((g) => buyVacant(g, rid, id, b.id), { sfx: 'buy', lot: id, shake: JUICE.shake.buy })}>
+                onClick={() => s.run((g) => buyVacant(g, rid, id, b.id), { sfx: 'buy', lot: id, shake: JUICE.shake.buy, pulse: 'grow' })}>
                 <span class="bo-name">{b.name}<em class={`fit ${f.tone}`}>{f.label}</em></span>
                 <span class="bo-blurb">{b.blurb}</span>
                 <span class="bo-row"><b class="gold">{money(price)}</b><span class="mint" data-testid={`est-${b.id}`}>≈ {perSec(f.est)}</span>
-                  {wait > 0 && <span class="red">permit ~{duration(wait)}</span>}</span>
+                  {wait > 0 && <span class="red">permit ~{duration(wait)}</span>}
+                  {lic && <span class="red" data-testid={`licence-${b.id}`}>{lic.name} {xf(lic.mult)}</span>}</span>
               </button>
             );
           })}

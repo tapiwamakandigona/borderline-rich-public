@@ -8,10 +8,10 @@ import {
 } from './data/progression';
 import { getCity } from './city';
 import {
-  allowedBiz, bizCost, derived, landPrice, lotValue, maxAffordable, milestoneMult, npcAsk, sellPrice, upgradeCostN,
+  allowedBiz, bizCost, derived, landPrice, licenceMult, lotValue, maxAffordable, milestoneMult, npcAsk, sellPrice, upgradeCostN,
 } from './economy';
 import { costIndex, laws } from './laws';
-import { ownsBiz, permitWait } from './mechanics';
+import { ownsBiz, permitWait, WAGE_DEAL_MAX, WAGE_DEAL_STEP } from './mechanics';
 import { chance } from './rng';
 import { notify } from './notify';
 import { money } from './format';
@@ -110,7 +110,8 @@ export function upgradeLot(s: GameState, regionId: RegionId, lotId: string, n: n
 
 export const managerCost = (s: GameState, regionId: RegionId, lotId: string) => {
   const ls = s.regions[regionId].lots[lotId];
-  return ls.biz ? Math.round(2 * bizCost(s, regionId, BIZ[ls.biz])) : 0;
+  // Wages follow the business, not the licence it needed to open.
+  return ls.biz ? Math.round((2 * bizCost(s, regionId, BIZ[ls.biz])) / licenceMult(regionId, ls.biz)) : 0;
 };
 export function hireManager(s: GameState, regionId: RegionId, lotId: string): ActionResult {
   const ls = s.regions[regionId].lots[lotId];
@@ -265,13 +266,21 @@ export function raiseVC(s: GameState): ActionResult {
   notify(s, 'Round closed! VCs take 25 % of your Neon Vale income for 30 min.', 'good');
   return ok;
 }
+/** An Ironhold wage deal costs real money (scaled to your Ironhold income, dearer each time),
+ *  raises your Ironhold wages for good and slows mood erosion with a cap — never a free off
+ *  switch for strikes (critic #8). */
+export const wageDealCost = (s: GameState) =>
+  Math.round(Math.max(800 * costIndex('ironhold'), derived(s).playerByRegion.ironhold * 150) * (1 + s.regions.ironhold.vars.wageDeal * 5));
 export function signWageDeal(s: GameState): ActionResult {
   const v = s.regions.ironhold.vars;
-  if (v.wageDeal >= 0.3) return fail('Wages are already at the negotiated ceiling.');
-  v.wageDeal = Math.min(0.3, v.wageDeal + 0.1);
-  v.unionMood = Math.min(100, v.unionMood + 25);
+  if (v.wageDeal >= WAGE_DEAL_MAX - 1e-9) return fail('Wages are already at the negotiated ceiling.');
+  const c = wageDealCost(s);
+  if (s.cash < c) return fail(`The union wants ${money(c)} up front.`);
+  s.cash -= c;
+  v.wageDeal = Math.min(WAGE_DEAL_MAX, v.wageDeal + WAGE_DEAL_STEP);
+  v.unionMood = Math.min(100, v.unionMood + 20);
   s.rev++;
-  notify(s, 'Wage deal signed: Ironhold wages +10 %, union mood +25, mood erodes slower.', 'good');
+  notify(s, `Wage deal signed for ${money(c)}: Ironhold wages +${Math.round(WAGE_DEAL_STEP * 100)} % for good, union mood +20, mood erodes slower.`, 'good');
   return ok;
 }
 export const bonusCost = (s: GameState) => Math.round(Math.max(300 * costIndex('ironhold'), derived(s).playerByRegion.ironhold * 90));

@@ -19,7 +19,7 @@ export const REGIONS: RegionDef[] = [
     blurb: 'A whitewashed harbour city run by a merchant council. Imports land tariff-free, which makes it the continent\'s favourite place to launder a shipping manifest. Crowded with old trading houses that do not like newcomers.',
     difficulty: 2,
     government: {
-      kind: 'council', name: 'Merchant Council', actionLabel: 'Buy a Guild Seat',
+      kind: 'council', name: 'Merchant Council', seat: 'Palazzo del Consiglio', actionLabel: 'Buy a Guild Seat',
       actionBlurb: 'Seats are permanent. Every seat you own votes with the bloc you back at each council session.',
       electionEveryDays: 4, incumbentBias: 1.2, permanentInfluence: true, actionHeat: 0,
     },
@@ -62,7 +62,7 @@ export const REGIONS: RegionDef[] = [
     blurb: 'A sun-baked boomtown on oil and copper. Land is dirt cheap and everything needs a permit — which you can wait weeks for, or "expedite". Elections happen, technically. Bandits work the highways.',
     difficulty: 2,
     government: {
-      kind: 'governor', name: 'Territorial Governor', actionLabel: 'Gift the Governor\'s Circle',
+      kind: 'governor', name: 'Territorial Governor', seat: 'Territorial Courthouse', actionLabel: 'Gift the Governor\'s Circle',
       actionBlurb: 'Gifts buy fast permits and goodwill. They are also, legally speaking, bribes: each one raises your heat.',
       electionEveryDays: 6, incumbentBias: 2.5, permanentInfluence: false, actionHeat: 6,
     },
@@ -104,13 +104,13 @@ export const REGIONS: RegionDef[] = [
     blurb: 'A rain-slick tech megacity on a bay. Everything costs double, wages are brutal and the money is enormous. A city-wide hype cycle lifts and drops tech valuations; regulators hunt monopolies; venture capital is always one meeting away.',
     difficulty: 4,
     government: {
-      kind: 'democracy', name: 'City Council', actionLabel: 'Fund a campaign',
+      kind: 'democracy', name: 'City Council', seat: 'Civic Tower', actionLabel: 'Fund a campaign',
       actionBlurb: 'Donations boost a party until the next vote, then reset. Votes come every 3 days.',
       electionEveryDays: 3, incumbentBias: 1.0, permanentInfluence: false, actionHeat: 0,
     },
     signature: { name: 'Hype Cycle', summary: 'Tech and services income ride a city-wide hype wave. Take VC money for instant cash at the cost of a revenue share. Antitrust bites big fish.' },
     pros: ['Strongest tech demand anywhere', 'VC term sheets for instant cash', 'Huge late-game ceiling'],
-    cons: ['The most expensive city', 'High wages and taxes', 'Four mega-rivals, antitrust probes'],
+    cons: ['The most expensive city', 'Street carts need a pricey vendor medallion', 'High wages and taxes', 'Four mega-rivals, antitrust probes'],
     hustle: { label: 'Gig deliveries in the rain', perTap: 3.2, upgradeName: 'E-bike battery' },
     economy: { costIndex: 2.2, wageIndex: 1.6, corruption: 0.2, spend: 0.75, demand: D({ tech: 2.0, finance: 1.5, services: 1.3, food: 1.2, retail: 1.1, industry: 0.7, logistics: 0.9, agri: 0.4, energy: 0.6 }) },
     baseLaws: L({ incomeTax: 0.24, importTariff: 0.12, exportTariff: 0.05, regulation: 0.6, enforcement: 0.65, minWage: 1.3 }),
@@ -137,6 +137,9 @@ export const REGIONS: RegionDef[] = [
     ],
     layout: { cols: 6, rows: 5, block: 40, road: 12, water: ['w'], industrialSide: 'n', edge2Side: 's', vacancy: 0.15, density: 0.85, parks: 2, seed: 303 },
     unlockCost: 2_000_000,
+    // Street food is a capped, licensed trade here (think city food-cart medallions), so the
+    // generic cart costs more to open than the local hustle: a phone repair stall.
+    licences: { cart: { mult: 2.5, name: 'Vendor medallion' } },
   },
   {
     id: 'amberfield',
@@ -147,7 +150,7 @@ export const REGIONS: RegionDef[] = [
     blurb: 'Golden plains, red barns and a main street where everybody knows your business (literally). Cheap, calm and friendly to newcomers. Farm income follows a four-day season cycle, and the co-op rewards anyone who commits to the land.',
     difficulty: 1,
     government: {
-      kind: 'democracy', name: 'County Assembly', actionLabel: 'Sponsor the county fair',
+      kind: 'democracy', name: 'County Assembly', seat: 'County Hall', actionLabel: 'Sponsor the county fair',
       actionBlurb: 'Sponsorship lifts a party until the next assembly vote (every 5 days), then resets.',
       electionEveryDays: 5, incumbentBias: 1.1, permanentInfluence: false, actionHeat: 0,
     },
@@ -188,7 +191,7 @@ export const REGIONS: RegionDef[] = [
     blurb: 'A pastel island town where tourism is everything and the banks ask no questions. High season prints money; low season and hurricanes take it back. An offshore office here can shelter profits from every other region\'s taxman — until the auditors come.',
     difficulty: 2,
     government: {
-      kind: 'democracy', name: 'Island Assembly', actionLabel: 'Donate to a party',
+      kind: 'democracy', name: 'Island Assembly', seat: 'Assembly House', actionLabel: 'Donate to a party',
       actionBlurb: 'Donations lift a party until the next vote (every 4 days), then reset.',
       electionEveryDays: 4, incumbentBias: 1.0, permanentInfluence: false, actionHeat: 0,
     },
@@ -230,7 +233,7 @@ export const REGIONS: RegionDef[] = [
     blurb: 'A brick-and-smokestack city in the snowy north. Industry earns like nowhere else and the Workers\' Diet keeps foreign goods out with high tariffs. But the union is watching: grow too fast without sharing and the mood sours into strikes.',
     difficulty: 3,
     government: {
-      kind: 'democracy', name: 'Workers\' Diet', actionLabel: 'Fund a caucus',
+      kind: 'democracy', name: 'Workers\' Diet', seat: 'Hall of the Diet', actionLabel: 'Fund a caucus',
       actionBlurb: 'Caucus funding lifts a party until the next Diet vote (every 4 days), then resets.',
       electionEveryDays: 4, incumbentBias: 1.15, permanentInfluence: false, actionHeat: 0,
     },

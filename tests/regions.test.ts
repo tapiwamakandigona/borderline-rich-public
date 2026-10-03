@@ -4,17 +4,18 @@ import { EVENTS } from '../src/core/data/events';
 import { getCity } from '../src/core/city';
 import { newGame } from '../src/core/state';
 import { derived } from '../src/core/economy';
-import { laws } from '../src/core/laws';
+import { costIndex, laws } from '../src/core/laws';
 import { DAY } from '../src/core/constants';
 import { quote } from '../src/core/trade';
-import { buyVacant, expeditePermit, toggleOffshore } from '../src/core/actions';
+import { buyVacant, expeditePermit, managerCost, signWageDeal, toggleOffshore, vacantPrice } from '../src/core/actions';
 import { advance } from '../src/core/sim';
 import {
   FREE_PORT_CERT, FUEL_MAX, FUEL_MIN, HYPE_MAX, HYPE_MIN, PERMIT_TIER1, PORT_BONUS, PORT_MAX_SHIPS, SEASON_MULT, SIGNATURE_CATEGORY,
   SOLENNE_START_SLOTS, TOURISM_HIGH, TOURISM_LOW, mechanicMult, mechanicsTick, permitWait,
+  WAGE_DEAL_MAX, WAGE_DEAL_SHIELD, FRIEND_STANDING, ENEMY_STANDING, favour,
 } from '../src/core/mechanics';
 import { BIZ, STARTER } from '../src/core/data/businesses';
-import { demandMult } from '../src/core/economy';
+import { bizCost, demandMult, landPrice, licenceMult, lotValue } from '../src/core/economy';
 import { regionFacts, xf } from '../src/core/pitch';
 import { ship } from '../src/core/trade';
 import type { GameState, RegionId } from '../src/core/types';
@@ -245,6 +246,71 @@ describe('F3 six genuinely different starting regions', () => {
     const wait = s.regions.redmesa.lots[smalls[1].id].permitUntil - s.t;
     expect(wait).toBeGreaterThan(20);
     expect(wait).toBeCloseTo(permitWait(s) * PERMIT_TIER1, 0);
+  });
+
+  it('Ironhold: wage deals cost real money, escalate, cap out, and only slow the union down', () => {
+    const s = newGame('ironhold', 2);
+    s.nextEventAt = 1e12; s.timers.churn = 1e12;
+    for (const r of Object.values(s.rivals)) r.nextActAt = 1e12;
+    for (let k = 0; k < 10; k++) place(s, 'ironhold', 'machineshop', 5);
+    expect(signWageDeal(s).ok).toBe(false); // broke: the union wants money up front
+    s.cash = 1e7;
+    const costs: number[] = [];
+    for (let k = 0; k < 3; k++) { const c0 = s.cash; expect(signWageDeal(s).ok).toBe(true); costs.push(c0 - s.cash); }
+    expect(costs[0]).toBeGreaterThan(0);
+    expect(costs[2]).toBeGreaterThan(costs[0]);
+    expect(signWageDeal(s).ok).toBe(false); // ceiling
+    let struck = false;
+    for (let m = 0; m < 40 && !struck; m++) { advance(s, 60); struck = s.regions.ironhold.vars.strikeUntil > 0 || s.notices.some((n) => n.text.startsWith('STRIKE')); }
+    expect(struck).toBe(true); // three maxed-out deals delay strikes; they don't switch them off
+    expect(WAGE_DEAL_MAX * WAGE_DEAL_SHIELD).toBeLessThan(0.5);
+  });
+
+  it('standing with the party in power matters in every region (tax, customs, Red Mesa permits)', () => {
+    for (const R of REGIONS) {
+      const s = newGame(R.id, 3);
+      const lot = place(s, R.id, STARTER[R.id]);
+      const rs = s.regions[R.id];
+      const ruling = rs.ruling;
+      const net0 = inc(s, R.id, lot);
+      rs.factions[ruling].standing = FRIEND_STANDING; s.rev++;
+      expect(favour(s, R.id), R.id).toBe('friend');
+      expect(inc(s, R.id, lot), R.id).toBeGreaterThan(net0);
+      rs.factions[ruling].standing = ENEMY_STANDING; s.rev++;
+      expect(favour(s, R.id), R.id).toBe('enemy');
+      expect(inc(s, R.id, lot), R.id).toBeLessThan(net0);
+    }
+    // Customs: smuggling into a region whose rulers hate you is riskier.
+    const s = newGame('amberfield', 3);
+    s.cargoLevel = 3;
+    const r0 = quote(s, 'grain', 50, 'ironhold', 'smuggle').risk;
+    s.regions.ironhold.factions[s.regions.ironhold.ruling].standing = -40;
+    expect(quote(s, 'grain', 50, 'ironhold', 'smuggle').risk).toBeGreaterThan(r0);
+    // Red Mesa: refusing the governor's nephew (standing -15 twice) makes permits slower.
+    const t = newGame('redmesa', 3);
+    const w0 = permitWait(t, 'gasstation');
+    t.regions.redmesa.factions.circle.standing = -30;
+    expect(permitWait(t, 'gasstation')).toBeGreaterThan(w0);
+  });
+
+  it('Neon Vale: street carts need a vendor medallion, so phone repair is the cheaper opener', () => {
+    const s = newGame('neonvale', 1);
+    const smalls = getCity('neonvale').lots.filter((d) => d.footprint === 'small' && s.regions.neonvale.lots[d.id].owner === 'vacant');
+    expect(smalls.length).toBeGreaterThan(0);
+    for (const d of smalls) expect(vacantPrice(s, 'neonvale', d.id, 'cart'), d.id).toBeGreaterThan(vacantPrice(s, 'neonvale', d.id, 'repairstall'));
+    // Only the licensed business pays: the same cart costs list price in every other region.
+    const list = (r: RegionId, biz: string) => BIZ[biz].baseCost * costIndex(r) * laws(newGame(r, 1), r).costMod;
+    expect(licenceMult('neonvale', 'cart')).toBeGreaterThan(2);
+    expect(bizCost(s, 'neonvale', BIZ.cart) / list('neonvale', 'cart')).toBeCloseTo(licenceMult('neonvale', 'cart'), 2);
+    expect(Math.abs(bizCost(s, 'neonvale', BIZ.repairstall) - list('neonvale', 'repairstall'))).toBeLessThanOrEqual(0.5);
+    for (const R of REGIONS) if (R.id !== 'neonvale') expect(Math.abs(bizCost(newGame(R.id, 1), R.id, BIZ.cart) - list(R.id, 'cart')), R.id).toBeLessThanOrEqual(0.5);
+    // The medallion is part of what the lot is worth, but a manager's wage follows the business.
+    s.cash = 1e6;
+    expect(buyVacant(s, 'neonvale', smalls[0].id, 'cart').ok).toBe(true);
+    expect(Math.abs(managerCost(s, 'neonvale', smalls[0].id) - 2 * list('neonvale', 'cart'))).toBeLessThanOrEqual(1);
+    expect(lotValue(s, 'neonvale', smalls[0].id)).toBeGreaterThan(landPrice(s, 'neonvale', smalls[0]) + list('neonvale', 'cart'));
+    // The region card states the rule from the live data.
+    expect(regionFacts('neonvale').find((f) => f.label === 'Vendor medallion')?.value).toBe(`${BIZ.cart.name} ${xf(licenceMult('neonvale', 'cart'))} to open`);
   });
 });
 

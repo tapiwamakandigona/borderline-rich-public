@@ -57,8 +57,9 @@ export const PERMIT_TIER1 = 0.4;
 /** Seconds a new Red Mesa business sits idle waiting for its permit. Everything needs one —
  *  except the Fuel Pump (the territory runs on gas); street-level tier-1 trades wait less. */
 export function permitWait(state: GameState, bizId?: string): number {
-  const favour = state.regions.redmesa.factions.circle?.standing ?? 0;
-  return permitSeconds(laws(state, 'redmesa').regulation, bizId) * (favour >= 50 ? 0.5 : 1);
+  const circle = state.regions.redmesa.factions.circle?.standing ?? 0;
+  const mult = circle >= FRIEND_STANDING ? 0.5 : circle <= ENEMY_STANDING ? 1.5 : 1;
+  return Math.round(permitSeconds(laws(state, 'redmesa').regulation, bizId) * mult);
 }
 /** Permit time for a regulation level (pure; also used for the region pitch). */
 export function permitSeconds(regulation: number, bizId?: string): number {
@@ -71,6 +72,10 @@ export function permitSeconds(regulation: number, bizId?: string): number {
 /** Below this union mood a strike can break out; it stops your industry & logistics. */
 export const STRIKE_MOOD = 30;
 export const STRIKE_SECS = 90;
+export const WAGE_DEAL_STEP = 0.1;
+export const WAGE_DEAL_MAX = 0.3;
+/** Each unit of wageDeal slows mood erosion by this much; at the ceiling erosion is still ×0.58. */
+export const WAGE_DEAL_SHIELD = 1.4;
 export const strikeActive = (s: GameState, T = s.t) => s.regions.ironhold.vars.strikeUntil > T;
 
 /** Multiplier a region's signature mechanic applies to a business category for an owner.
@@ -96,12 +101,30 @@ export function mechanicMult(state: GameState, regionId: RegionId, cat: Category
   }
 }
 
-/** Effective income-tax rate; the Verano offshore shelter cuts the player's tax elsewhere. */
+// ── Politics everywhere: standing with the party in power (critic #9) ─────────────────────────
+export const FRIEND_STANDING = 50;
+export const ENEMY_STANDING = -25;
+export const FRIEND_TAX = 0.8;
+export const ENEMY_TAX = 1.2;
+export const FRIEND_CUSTOMS = 0.8;
+export const ENEMY_CUSTOMS = 1.3;
+/** 'friend' / 'enemy' of the faction currently in power in a region (null = neither). */
+export function favour(state: GameState, regionId: RegionId): 'friend' | 'enemy' | null {
+  const rs = state.regions[regionId];
+  const st = rs.factions[rs.ruling]?.standing ?? 0;
+  return st >= FRIEND_STANDING ? 'friend' : st <= ENEMY_STANDING ? 'enemy' : null;
+}
+
 /** The Verano offshore shelter multiplies your income tax outside Verano by this. */
 export const OFFSHORE_TAX_MULT = 0.45;
+/** Effective income-tax rate: friends of the ruling party pay less, its enemies more, and the
+ *  Verano offshore shelter cuts the player's tax everywhere else. */
 export function taxRate(state: GameState, regionId: RegionId, owner: OwnerId): number {
-  const base = laws(state, regionId).incomeTax;
-  return owner === 'player' && regionId !== 'verano' && offshoreActive(state) ? base * OFFSHORE_TAX_MULT : base;
+  let t = laws(state, regionId).incomeTax;
+  if (owner !== 'player') return t;
+  const f = favour(state, regionId);
+  if (f) t *= f === 'friend' ? FRIEND_TAX : ENEMY_TAX;
+  return regionId !== 'verano' && offshoreActive(state) ? t * OFFSHORE_TAX_MULT : t;
 }
 
 function playerIndustryCount(state: GameState): number {
@@ -136,7 +159,7 @@ export function mechanicsTick(state: GameState, dt: number): void {
   // Ironhold union mood: erodes as your industrial footprint grows, recovers without it.
   const ih = state.regions.ironhold.vars;
   const n = playerIndustryCount(state);
-  if (n > 0) ih.unionMood -= dt * 0.02 * (1 + n * 0.25) * Math.max(0.1, 1 - ih.wageDeal * 3.2);
+  if (n > 0) ih.unionMood -= dt * 0.02 * (1 + n * 0.25) * (1 - Math.min(WAGE_DEAL_MAX, ih.wageDeal) * WAGE_DEAL_SHIELD);
   else ih.unionMood += (70 - ih.unionMood) * 0.005 * dt;
   ih.unionMood = Math.min(100, Math.max(0, ih.unionMood));
   if (ih.strikeUntil > 0 && ih.strikeUntil <= state.t) {

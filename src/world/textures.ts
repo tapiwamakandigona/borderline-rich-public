@@ -33,8 +33,9 @@ export interface Facade { map: THREE.CanvasTexture; emissive: THREE.CanvasTextur
 const CELL = 128;
 const GRID = 4;
 
-/** 4×4 window cells; walls are white so per-building vertex colours tint them. */
-export function facade(style: WindowStyle, seed: number, glow: number): Facade {
+/** 4×4 window cells; walls are white so per-building vertex colours tint them. `palette` (neon
+ *  cities) colours lit curtain-wall floors individually instead of one glow colour. */
+export function facade(style: WindowStyle, seed: number, glow: number, palette?: number[]): Facade {
   const S = CELL * GRID;
   const [c, g] = canvas(S, S);
   const [e, ge] = canvas(S, S);
@@ -73,13 +74,25 @@ export function facade(style: WindowStyle, seed: number, glow: number): Facade {
       g.fillStyle = grd; g.fillRect(x, y, w, h);
       g.fillStyle = 'rgba(255,255,255,0.18)';
       g.beginPath(); g.moveTo(x + w * 0.15, y + h); g.lineTo(x + w * 0.45, y); g.lineTo(x + w * 0.6, y); g.lineTo(x + w * 0.3, y + h); g.fill();
-      if (on && (style !== 'curtain' || next(r) < 0.7)) {
+      if (style === 'curtain') {
+        // Curtain walls light individual office floors (not whole cells, which tiled into a
+        // grey/white checkerboard at night — critic #6e), each in its own colour on neon cities.
+        const strips = 4, sh = h / strips;
+        for (let k = 0; k < strips; k++) {
+          if (next(r) > 0.42) continue;
+          const col = palette ? palette[Math.floor(next(r) * palette.length)] : glow;
+          ge.fillStyle = hex(col);
+          ge.globalAlpha = 0.5 + next(r) * 0.45;
+          ge.fillRect(x + 2, y + k * sh + 2, w - 4, sh - 4);
+          ge.globalAlpha = 1;
+          ge.fillStyle = 'rgba(0,0,0,0.55)';
+          for (let xx = x + 10; xx < x + w; xx += 14) ge.fillRect(xx, y + k * sh + 2, 2, sh - 4);
+        }
+      } else if (on) {
         ge.fillStyle = lit;
-        ge.globalAlpha = style === 'curtain' ? 0.4 + next(r) * 0.4 : 0.65 + next(r) * 0.35;
+        ge.globalAlpha = 0.65 + next(r) * 0.35;
         ge.fillRect(x, y, w, h);
         ge.globalAlpha = 1;
-        // Office blinds break big curtain-wall panes into readable lit floors instead of white slabs.
-        if (style === 'curtain') { ge.fillStyle = 'rgba(0,0,0,0.6)'; for (let yy = y + 3; yy < y + h; yy += 6) ge.fillRect(x, yy, w, 2); }
       }
     };
     switch (style) {

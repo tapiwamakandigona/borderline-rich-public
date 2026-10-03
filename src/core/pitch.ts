@@ -48,6 +48,7 @@ export function regionFacts(id: RegionId): Fact[] {
       out.push(
         { label: 'Hype on tech & services', value: `${xf(HYPE_MIN)} – ${xf(HYPE_MAX)}` },
         { label: 'Prices', value: xf(R.economy.costIndex), tone: 'bad' },
+        ...Object.entries(R.licences ?? {}).map(([biz, l]): Fact => ({ label: l.name, value: `${BIZ[biz].name} ${xf(l.mult)} to open`, tone: 'bad' })),
         { label: 'Income tax', value: pct(L.incomeTax), tone: 'bad' },
       );
       break;
