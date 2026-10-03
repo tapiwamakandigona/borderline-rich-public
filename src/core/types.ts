@@ -189,7 +189,8 @@ export interface PendingEvent {
   at: number;
 }
 
-export type NoticeKind = 'good' | 'bad' | 'info' | 'rival' | 'politics' | 'trade';
+/** 'market' notices are feed-only (Rivals → News); they never pop a toast. */
+export type NoticeKind = 'good' | 'bad' | 'info' | 'rival' | 'politics' | 'trade' | 'market';
 export interface Notice { id: number; t: number; text: string; kind: NoticeKind; }
 
 export interface GameState {

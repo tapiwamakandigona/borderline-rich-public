@@ -28,8 +28,15 @@ export function installTestHook(s: Session): void {
       s.world.player.path = null;
       // Camera behind the player, looking at the lot's front.
       s.world.rig.azimuth = { s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 }[def.facing];
-      s.world.rig.dist = 64;
-      s.world.rig.polar = 0.92;
+      s.world.rig.resetView();
+      s.world.rig.snap(p);
+    },
+    /** Hold random events for a scripted session (explicit b.event() calls still work). */
+    quiet: () => {
+      const st = s.state;
+      if (!st) return;
+      st.nextEventAt = st.t + 1e6;
+      for (const r of Object.values(st.rivals)) r.nextActAt = st.t + 1e6; // offers/sabotage also open modals
     },
     lotScreen: (lotId: string) => {
       const v = s.world.lotVisual(lotId);

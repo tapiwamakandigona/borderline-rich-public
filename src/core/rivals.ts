@@ -73,7 +73,13 @@ export function rivalAct(state: GameState, rivalId: string): void {
         });
         claimLot(state, regionId, d.id, def, landPrice(state, regionId, d));
         r.lastAction = `Opened a new site in ${REGION[regionId].districts.find((q) => q.id === d.district)!.name}.`;
-        if (rs.unlocked) notify(state, `${def.name} grabbed a lot in ${REGION[regionId].districts.find((q) => q.id === d.district)!.name}.`, 'rival');
+        if (rs.unlocked) {
+          // Only a grab that competes with one of your businesses (same district + category) is worth a toast.
+          const nb = rs.lots[d.id].biz;
+          const threat = !!nb && city.lots.some((o) => o.district === d.district && rs.lots[o.id].owner === 'player' && rs.lots[o.id].biz && BIZ[rs.lots[o.id].biz!].category === BIZ[nb].category);
+          const dn = REGION[regionId].districts.find((q) => q.id === d.district)!.name;
+          notify(state, threat ? `${def.name} opened a rival ${BIZ[nb!].name} next to yours in ${dn}.` : `${def.name} grabbed a lot in ${dn}.`, threat ? 'rival' : 'market');
+        }
         return;
       }
     }
@@ -188,7 +194,7 @@ export function npcChurn(state: GameState): void {
         const old = rs.lots[d.id].biz;
         rs.lots[d.id] = { ...rs.lots[d.id], owner: 'vacant', biz: null, level: 0 };
         state.rev++;
-        if (regionId === state.currentRegion && old) notify(state, `For sale: the old ${BIZ[old].name} in ${REGION[regionId].districts.find((q) => q.id === d.district)!.name} just closed.`, 'info');
+        if (regionId === state.currentRegion && old) notify(state, `For sale: the old ${BIZ[old].name} in ${REGION[regionId].districts.find((q) => q.id === d.district)!.name} just closed.`, 'market');
       }
     }
     if (chance(state, 0.12)) {

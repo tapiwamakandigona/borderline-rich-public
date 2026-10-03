@@ -18,7 +18,7 @@ import { PAINTS } from '../core/data/progression';
 import { money } from '../core/format';
 import { SandboxStore, type KeyValue, type Store } from '../iap/store';
 import { fulfill, restoreEntitlements } from '../iap/fulfill';
-import { PRODUCT, type Product } from '../iap/catalog';
+import type { Product } from '../iap/catalog';
 import type { QualityName } from '../world/quality';
 
 export const SAVE_KEY = 'br.save.v1';
@@ -75,6 +75,9 @@ export class Session {
   private collectAcc = 0;
   private lastNotice = 0;
   private lastRivalToast = -1e9;
+  /** Toasts that arrived while a modal was open; shown (newest two) once it closes. */
+  private held: Toast[] = [];
+  private pendingRank: string | null = null;
   private nextId = 1;
   private hiddenAt = 0;
   private lastVehicle = '';
@@ -84,12 +87,13 @@ export class Session {
   private showT = 55;
   private raf = 0;
 
-  constructor(readonly canvas: HTMLCanvasElement, readonly layer: HTMLElement) {
+  /** @param joyLayer element that hosts the floating joystick (never the Preact root). */
+  constructor(readonly canvas: HTMLCanvasElement, joyLayer: HTMLElement) {
     const st = this.settings.value;
     setReducedMotion(st.reducedMotion);
     this.sfx.enabled = st.sound;
     this.world = new World(canvas, st.quality);
-    this.controls = new Controls(canvas, layer, {
+    this.controls = new Controls(canvas, joyLayer, {
       onTap: (x, y) => this.tap(x, y),
       onOrbit: (dx, dy) => this.world.rig.orbit(dx, dy),
       onZoom: (f) => this.world.rig.zoom(f),
@@ -177,26 +181,34 @@ export class Session {
   private afterSim(dt: number): void {
     const s = this.state!;
     if (s.currentRegion !== this.world.region) this.enterRegion();
-    // Notices → toasts (+ rank-up celebration)
+    // Notices → toasts (+ rank-up celebration). Market news (NPC churn, routine rival grabs) is
+    // feed-only; rival moves toast at most once per 30 s. Everything stays in Rivals → News.
     for (const n of s.notices) {
       if (n.id <= this.lastNotice) continue;
       this.lastNotice = n.id;
-      if (n.text.startsWith('RANK UP')) {
-        this.rankUp.value = n.text.replace(/^RANK UP — /, '');
-        this.sfx.play('rankup');
-        this.shake(JUICE.shake.rankUp);
-        this.burst(this.world.player.pos.clone().setY(2), 24);
-        setTimeout(() => { this.rankUp.value = null; }, 2600);
-      } else {
-        // Rival moves are frequent; toast at most one every 25 s (all of them are in Rivals → News).
-        if (n.kind === 'rival') {
-          const now = performance.now();
-          if (now - this.lastRivalToast < 25_000) continue;
-          this.lastRivalToast = now;
-        }
-        this.toast(n.text, n.kind);
-        if (n.kind === 'bad') { this.sfx.play('bad'); this.shake(JUICE.shake.bad); }
+      if (n.text.startsWith('RANK UP')) { this.pendingRank = n.text.replace(/^RANK UP — /, ''); continue; }
+      if (n.kind === 'market') continue;
+      if (n.kind === 'rival') {
+        const now = performance.now();
+        if (now - this.lastRivalToast < 30_000) continue;
+        this.lastRivalToast = now;
       }
+      this.toast(n.text, n.kind);
+      if (n.kind === 'bad') { this.sfx.play('bad'); this.shake(JUICE.shake.bad); }
+    }
+    // The rank-up celebration waits until nothing covers the screen (no card, sheet or modal).
+    if (this.pendingRank && !this.uiBusy()) {
+      this.rankUp.value = this.pendingRank;
+      this.pendingRank = null;
+      this.sfx.play('rankup');
+      this.shake(JUICE.shake.rankUp);
+      this.burst(this.world.player.pos.clone().setY(2), 24);
+      setTimeout(() => { this.rankUp.value = null; }, 2600);
+    }
+    if (this.held.length && !this.modalOpen()) {
+      const h = this.held.slice(-2);
+      this.held = [];
+      for (const t of h) this.toast(t.text, t.kind);
     }
     const evKey = s.pendingEvent ? `${s.pendingEvent.defId}@${s.pendingEvent.at}` : null;
     if (evKey && evKey !== this.eventSeen) { this.sfx.play('event'); this.selected.value = null; this.world.select(null); }
@@ -326,9 +338,19 @@ export class Session {
   shake(amount: number): void { if (!JUICE.reducedMotion) this.world.rig.shake(amount); }
   burst(at: THREE.Vector3, n: number): void { if (!JUICE.reducedMotion) this.world.coins.emit(at, n); }
 
+  /** A modal (event, welcome-back, payment) is on screen: toasts must not draw over it. */
+  modalOpen(): boolean {
+    return !!(this.state?.pendingEvent && this.screen.value === 'game') || !!this.welcome.value || !!this.pendingPurchase.value;
+  }
+  /** Anything big on screen (modal, sheet or lot card): celebrations wait. */
+  uiBusy(): boolean { return this.modalOpen() || !!this.sheet.value || !!this.selected.value; }
+
+  /** At most two toasts at a time; while a modal is open they are held and shown after it closes. */
   toast(text: string, kind = 'info'): void {
     const id = this.nextId++;
-    this.toasts.value = [...this.toasts.value.slice(-2), { id, text, kind }];
+    if (this.modalOpen()) { this.held = [...this.held.slice(-3), { id, text, kind }]; return; }
+    if (this.toasts.value.some((t) => t.text === text)) return; // never the same line twice
+    this.toasts.value = [...this.toasts.value.slice(-1), { id, text, kind }];
     setTimeout(() => { this.toasts.value = this.toasts.value.filter((t) => t.id !== id); }, 3400);
   }
 
@@ -355,8 +377,7 @@ export class Session {
     if (!r.ok) { this.toast(r.reason === 'already-owned' ? 'You already own that.' : 'Purchase could not be applied.', 'bad'); return; }
     this.sfx.play('rankup');
     this.burst(this.world.player.pos.clone().setY(2), 20);
-    this.toast(`${PRODUCT[productId].title} — thank you!`, 'good');
-    this.save();
+    this.save(); // fulfill() already posted the "Purchase complete" notice → one toast
     this.tick.value++;
   }
 
@@ -364,7 +385,7 @@ export class Session {
     if (!this.state) return;
     const ids = await this.store.restore();
     const got = restoreEntitlements(this.state, ids);
-    this.toast(got.length ? `Restored: ${got.map((id) => PRODUCT[id]?.title ?? id).join(', ')}` : 'Nothing to restore.', got.length ? 'good' : 'info');
+    if (!got.length) this.toast('Nothing to restore.', 'info'); // successes arrive as a notice
     this.tick.value++;
   }
 

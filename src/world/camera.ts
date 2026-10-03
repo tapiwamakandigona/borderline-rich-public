@@ -35,8 +35,12 @@ export class CameraRig {
     this.mode = 'follow';
     this.target.copy(at);
     this.lookAt.copy(at);
-    this.dist = 64; this.polar = 0.92;
+    this.resetView();
   }
+  /** Default follow framing (distance + tilt). */
+  resetView(): void { this.dist = 64; this.polar = 0.92; }
+  /** Jump straight to the follow target (no easing), e.g. after a teleport. */
+  snap(at: THREE.Vector3): void { this.target.copy(at); this.lookAt.copy(at); }
   /** Smoothly move the follow target to a point of interest (e.g. an event's building). */
   peek(at: THREE.Vector3): void { this.lookAt.lerp(at, 0.5); }
 

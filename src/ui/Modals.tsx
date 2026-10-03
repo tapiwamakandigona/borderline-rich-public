@@ -19,7 +19,7 @@ export function EventModal() {
     const bad = r.won === false;
     s.sfx.play(bad ? 'bad' : r.won ? 'rankup' : 'tap');
     if (bad) s.shake(JUICE.shake.bad);
-    if (r.text) s.toast(r.text, bad ? 'bad' : r.won ? 'good' : 'info');
+    // The outcome text arrives as a core notice → exactly one toast once the modal has closed.
     s.syncWorld();
     s.tick.value++;
   };
@@ -62,7 +62,7 @@ export function WelcomeBack() {
 export function RankUp() {
   const s = useSession();
   const r = s.rankUp.value;
-  if (!r) return null;
+  if (!r || s.uiBusy()) return null; // never over a card, sheet or modal
   const [name, reward] = r.split('!');
   return (
     <div class="rankup" aria-live="polite">
@@ -119,6 +119,7 @@ export function SettingsSheet() {
 
 export function Toasts({ top = false }: { top?: boolean }) {
   const s = useSession();
+  if (s.modalOpen()) return null;
   return (
     <div class={`toasts${top ? ' top' : ''}`} aria-live="polite">
       {s.toasts.value.map((t) => <div key={t.id} class={`toast ${t.kind}`}>{t.text}</div>)}

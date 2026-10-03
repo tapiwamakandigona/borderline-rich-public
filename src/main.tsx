@@ -21,11 +21,16 @@ loadFonts();
 const root = document.getElementById('app')!;
 const canvas = document.createElement('canvas');
 canvas.className = 'world';
+// The joystick gets its own layer. Preact must render into an EMPTY container: given existing
+// children it adopts them, and the joystick div once became the UI root, so every joystick drag
+// translated the whole HUD off-screen (critic finding #1).
+const joyLayer = document.createElement('div');
+joyLayer.className = 'layer joy-layer';
 const layer = document.createElement('div');
 layer.className = 'layer';
-root.append(canvas, layer);
+root.append(canvas, joyLayer, layer);
 
-const session = new Session(canvas, layer);
+const session = new Session(canvas, joyLayer);
 setSession(session);
 render(<App />, layer);
 

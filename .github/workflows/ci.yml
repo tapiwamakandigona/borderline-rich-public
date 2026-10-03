@@ -22,6 +22,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build:test
       - run: npx playwright test
+      # Screenshots only when something failed; never fail the job on artifact storage quota.
       - uses: actions/upload-artifact@v4
-        if: always()
-        with: { name: e2e-screenshots, path: e2e/__shots__, if-no-files-found: ignore }
+        if: failure()
+        continue-on-error: true
+        with: { name: e2e-screenshots, path: e2e/__shots__, if-no-files-found: ignore, retention-days: 3 }
