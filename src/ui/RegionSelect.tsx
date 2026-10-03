@@ -6,6 +6,8 @@ import { useSession, Btn } from './kit';
 import { Icon, Stars } from './icons';
 
 const DIFF = ['', 'Relaxed', 'Standard', 'Hard', 'Expert'];
+// Keep a number on the same line as its unit ("90 s", "20 %") so narrow cards never orphan the unit.
+const glue = (t: string) => t.replace(/(\d) (?=%|[smh]\b)/g, '$1\u00a0');
 
 export function RegionSelect() {
   const s = useSession();
@@ -59,7 +61,7 @@ export function RegionSelect() {
               <span>{r.signature.summary}</span>
               <dl class="rc-facts" data-testid={`facts-${r.id}`}>
                 {regionFacts(r.id).map((f) => (
-                  <div key={f.label} class={f.tone ?? ''}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+                  <div key={f.label} class={f.tone ?? ''}><dt>{f.label}</dt><dd>{glue(f.value)}</dd></div>
                 ))}
               </dl>
             </div>
@@ -68,7 +70,10 @@ export function RegionSelect() {
               <ul class="cons">{r.cons.map((p) => <li key={p}>{p}</li>)}</ul>
             </div>
             <div class="rc-start"><Icon name="hand" size={16} /> First job: {r.hustle.label.toLowerCase()}</div>
-            <Btn kind="gold" testid={`start-${r.id}`} onClick={() => s.start(r.id)}>Start in {r.city}</Btn>
+            {/* Sticky footer: on short phones the card scrolls, but Start is always on screen. */}
+            <div class="rc-cta">
+              <Btn kind="gold" testid={`start-${r.id}`} onClick={() => s.start(r.id)}>Start in {r.city}</Btn>
+            </div>
           </article>
         ))}
       </div>
