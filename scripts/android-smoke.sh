@@ -21,6 +21,8 @@ wait_for() {
     sleep 3
     dump "$1"
     if xy=$($UI "$OUT/$1.xml" find "$2"); then echo "$xy"; return 0; fi
+    # Fallback if the full-screen confirmation still appears: dismiss it and look again.
+    if xy=$($UI "$OUT/$1.xml" find '^Got it$'); then adb shell input tap $xy > /dev/null 2>&1; fi
   done
   return 1
 }
@@ -28,6 +30,10 @@ wait_for() {
 adb install -r "$APK" || fail "adb install"
 adb shell dumpsys package "$PKG" | grep -E "versionCode|versionName" | head -2
 adb logcat -c
+# The app runs immersive, so on a fresh device Android shows its one-time "Viewing full screen"
+# confirmation on top. uiautomator then dumps only that system window, never the WebView, so the
+# region select looks missing. Mark the confirmation as seen before launching.
+adb shell settings put secure immersive_mode_confirmations confirmed
 adb shell am start -W -n "$PKG/.MainActivity" || fail "launch"
 
 XY=$(wait_for 1-select 'Start in ' 40) || fail "region select never showed a Start button"
