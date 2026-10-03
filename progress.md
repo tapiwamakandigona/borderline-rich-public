@@ -41,3 +41,10 @@
 - VERIFIED local smoke of dist-single over http: region select -> Amberfield -> hustle, fonts loaded, 0 console errors.
 - capacitor.config.ts (plain data until @capacitor/* is installed in M3) and docs/IAP.md (product ids, NativeStore plan, owner actions).
 - Published https://bridgeton-grants.viktor.page/borderline-rich (access: workspace members). VERIFIED the URL answers 302 to the sign-in gate; ASSUMED it renders like the local smoke once signed in.
+
+## 2026-10-03 08:20 UTC — T10 critic verdict + T10a/T10b
+- Critic (max tier, read-only) verdict NEEDS_WORK, 14 findings → evaluation.json; plan.md T10a–T10h in player-impact order.
+- GitHub e2e was red for two reasons, both fixed in a6e4a23: (1) camera easing on a slow runner left the lot off-screen after a teleport (hook now snaps the camera; spec polls); (2) a random event modal intercepted a click (hook quiet() holds random events + rival actions in scripted specs). Artifact upload hit the account's storage quota → upload only on failure, continue-on-error.
+- T10a VERIFIED: new controls.spec fails on the old main.tsx (joystick ring never drawn — Preact had adopted it as the UI root) and passes on the fix; HUD boxes identical before/after a joystick drag.
+- T10b VERIFIED: ui.spec asserts no rank-up over the lot card or sheets, no toast over the event modal (held toast appears after it closes), exactly one "thank you" toast per purchase. Screenshots reviewed (ui-vacant, ui-event, ui-sheet-politics).
+- npm run ci green (12 files). Note: e2e spec timing flake fixed by polling the goal tick instead of sleeping 300 ms.

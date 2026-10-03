@@ -65,9 +65,9 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
 - [x] T9 Hosted single-file build, PWA manifest, Capacitor config (F16) — playtest: https://bridgeton-grants.viktor.page/borderline-rich (workspace sign-in)
 - [x] T10 Max-tier read-only critic → `evaluation.json` (verdict **NEEDS_WORK**, 14 findings, 2026-10-03)
 - T10 fix list — critic findings in player-impact order (finding # in `evaluation.json` in brackets):
-  - [ ] T10a Joystick moved the whole HUD (Preact adopted the joystick div as its root) + e2e that
+  - [x] T10a Joystick moved the whole HUD (Preact adopted the joystick div as its root) + e2e that
         asserts the HUD/joystick on screen + CI e2e robustness (camera settle, no random modals) [1, 13] (F14, F1)
-  - [ ] T10b Notifications: churn/rival toasts throttled into News, nothing over modals/lot card,
+  - [x] T10b Notifications: churn/rival toasts throttled into News, nothing over modals/lot card,
         rank-up banner placement, no duplicate toasts [7] (F15)
   - [ ] T10c Regions play differently in the first 20 min: region starter businesses + signature
         mechanics that touch tier-1, Solenne Free Port works for residents, region cards generated from
