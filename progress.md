@@ -142,3 +142,4 @@
   10.9 vs 264.3, verano 9.3 vs 169.9 — all pass. `npm run ci` green (113 tests).
 - 2026-10-03 Play compliance: Settings sheet links the privacy policy (tapiwamakandigona.github.io/emberdelve/store/borderline-rich-privacy.html). npm run ci green (113 tests).
 - 2026-10-03 Audio: procedural per-region ambient music (src/audio/music.ts; shares the Sfx context, follows the Sound toggle, mutes in background). tests/music.test.ts. npm run ci green (16 files / 115 tests, boot set 20,752 B). VERIFIED locally; on-device listen ASSUMED pending.
+- 2026-10-03 CI: android-smoke dismisses a system-launcher ANR dialog ("Wait") that hid the WebView in run #13 (infra flake; our app's ANR/crash still fails). VERIFIED: bash -n + android_ui.py finds the dialog and Wait button in run #13's dump.

@@ -36,6 +36,11 @@ wait_for() {
     if xy=$($UI "$OUT/$1.xml" find "$2"); then echo "$xy"; return 0; fi
     # Fallback if the full-screen confirmation still appears: dismiss it and look again.
     if xy=$($UI "$OUT/$1.xml" find '^Got it$'); then adb shell input tap $xy > /dev/null 2>&1; fi
+    # A slow emulator can raise an ANR for the system launcher (never for our app — that still fails
+    # the crash check) whose dialog hides the WebView. Choose "Wait" and look again.
+    if $UI "$OUT/$1.xml" find "^(Pixel Launcher|System UI)[^ ]* isn.t responding" > /dev/null; then
+      if xy=$($UI "$OUT/$1.xml" find '^Wait$'); then adb shell input tap $xy > /dev/null 2>&1; fi
+    fi
   done
   return 1
 }
