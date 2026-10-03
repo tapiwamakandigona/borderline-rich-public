@@ -7,7 +7,7 @@ import { REGION } from '../../src/core/data/regions';
 import { BIZ } from '../../src/core/data/businesses';
 import { EVENT } from '../../src/core/data/events';
 import { getCity } from '../../src/core/city';
-import { allowedBiz, bizCost, derived, landPrice, npcAsk, upgradeCost } from '../../src/core/economy';
+import { allowedBiz, bizCost, demandMult, derived, fitMult, incomeIndex, landPrice, npcAsk, upgradeCost } from '../../src/core/economy';
 import { laws } from '../../src/core/laws';
 import {
   buyNpc, buyVacant, collect, hireManager, hustleCost, hustlePerTap, hustleTap, managerCost, resolveEvent, upgradeHustle, upgradeLot,
@@ -22,8 +22,7 @@ function netFactor(s: GameState, r: RegionId): number {
 }
 function estIncome(s: GameState, r: RegionId, district: string, bizId: string): number {
   const b = BIZ[bizId];
-  const d = REGION[r].districts.find((x) => x.id === district)!;
-  return b.baseIncome * REGION[r].economy.demand[b.category] * (d.fit[b.category] ?? 1) * (laws(s, r).categoryMods[b.category] ?? 1) * netFactor(s, r);
+  return b.baseIncome * incomeIndex(r) * demandMult(r, b.category) * fitMult(r, district, b.category) * (laws(s, r).categoryMods[b.category] ?? 1) * netFactor(s, r);
 }
 
 function chooseEvent(s: GameState): number {

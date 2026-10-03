@@ -74,10 +74,11 @@ describe('F5 businesses, lots, upgrades, managers', () => {
     expect(upgradeLot(s, R, lot.id, 'max').levels).toBe(7);
   });
 
-  it('income doubles at the level-10 milestone', () => {
+  it('income jumps at the level-10 milestone (and keeps compounding at 25/50/100)', () => {
     expect(milestoneMult(9)).toBe(1);
-    expect(milestoneMult(10)).toBe(2);
-    expect(milestoneMult(25)).toBe(4);
+    expect(milestoneMult(10)).toBeGreaterThanOrEqual(1.5);
+    expect(milestoneMult(25)).toBeGreaterThan(milestoneMult(10));
+    expect(milestoneMult(100)).toBeGreaterThan(milestoneMult(50));
     const s = newGame(R, 2);
     s.cash = 1e9;
     const lot = vacantSmall(s);
@@ -85,7 +86,7 @@ describe('F5 businesses, lots, upgrades, managers', () => {
     upgradeLot(s, R, lot.id, 8);
     const at9 = net(s, lot.id);
     upgradeLot(s, R, lot.id, 1);
-    expect(net(s, lot.id) / at9).toBeCloseTo((10 * 2) / 9, 6);
+    expect(net(s, lot.id) / at9).toBeCloseTo((10 * milestoneMult(10)) / 9, 6);
   });
 
   it('unmanaged income fills a till capped at 120 s; collecting moves it to cash; managers bank it', () => {

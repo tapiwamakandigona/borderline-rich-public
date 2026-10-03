@@ -55,11 +55,11 @@ Builds: `npm run build` (multi-file, for Capacitor/web), `npm run build:single`
 Feature ids refer to `features.json`. Check a box only when the feature's verify command is green.
 
 - [x] T1 Repo + harness scaffold, CI, docs (F1)
-- [ ] T2 Core sim: types, RNG, data (businesses, regions, goods), city layout, economy, save (F2, F5)
-- [ ] T3 Region mechanics + politics + trade/tariffs + heat (F3, F6, F7)
-- [ ] T4 Rivals + Rich List + events + goals + vehicles + expansion (F8, F9, F10)
-- [ ] T5 IAP layer + offline earnings (F11, F12)
-- [ ] T6 Balance bot tests + tuning (F4, F17)
+- [x] T2 Core sim: types, RNG, data (businesses, regions, goods), city layout, economy, save (F2, F5)
+- [x] T3 Region mechanics + politics + trade/tariffs + heat (F3, F6, F7)
+- [x] T4 Rivals + Rich List + events + goals + vehicles + expansion (F8, F9, F10)
+- [x] T5 IAP layer + offline earnings (F11, F12)
+- [x] T6 Balance bot tests + tuning (F4, F17)
 - [ ] T7 3D world renderer, six region looks, perf budget, screenshots (F13)
 - [ ] T8 Input + UI + audio + main loop wiring (F14, F15)
 - [ ] T9 Hosted single-file build, PWA manifest, Capacitor config (F16)

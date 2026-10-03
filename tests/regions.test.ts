@@ -9,7 +9,7 @@ import { DAY } from '../src/core/constants';
 import { quote } from '../src/core/trade';
 import { buyVacant, expeditePermit, toggleOffshore } from '../src/core/actions';
 import { advance } from '../src/core/sim';
-import { mechanicsTick } from '../src/core/mechanics';
+import { HYPE_MAX, HYPE_MIN, SEASON_MULT, TOURISM_HIGH, TOURISM_LOW, mechanicsTick } from '../src/core/mechanics';
 import type { GameState, RegionId } from '../src/core/types';
 
 /** Put a player business directly on the first vacant lot that allows it. */
@@ -65,23 +65,25 @@ describe('F3 six genuinely different starting regions', () => {
     }
   });
 
-  it('Amberfield: harvest-season farm income is 5x winter income', () => {
+  it('Amberfield: harvest-season farm income is a multiple of winter income', () => {
     const s = newGame('amberfield', 1);
     const lot = place(s, 'amberfield', 'farmstand');
     s.t = 2 * DAY + 1; s.rev++;
     const harvest = inc(s, 'amberfield', lot);
     s.t = 3 * DAY + 1; s.rev++;
     const winter = inc(s, 'amberfield', lot);
-    expect(harvest / winter).toBeCloseTo(2.0 / 0.4, 5);
+    expect(harvest / winter).toBeCloseTo(SEASON_MULT[2] / SEASON_MULT[3], 5);
+    expect(harvest / winter).toBeGreaterThanOrEqual(3);
   });
 
   it('Neon Vale: tech income rides the hype index', () => {
     const s = newGame('neonvale', 1);
     const lot = place(s, 'neonvale', 'appstudio');
-    s.regions.neonvale.vars.hype = 0.6; s.rev++;
+    s.regions.neonvale.vars.hype = HYPE_MIN; s.rev++;
     const low = inc(s, 'neonvale', lot);
-    s.regions.neonvale.vars.hype = 1.7; s.rev++;
-    expect(inc(s, 'neonvale', lot) / low).toBeCloseTo(1.7 / 0.6, 5);
+    s.regions.neonvale.vars.hype = HYPE_MAX; s.rev++;
+    expect(inc(s, 'neonvale', lot) / low).toBeCloseTo(HYPE_MAX / HYPE_MIN, 5);
+    expect(HYPE_MAX / HYPE_MIN).toBeGreaterThanOrEqual(2);
   });
 
   it('Red Mesa: tier-2 businesses wait for a permit unless you bribe (heat up)', () => {
@@ -110,7 +112,8 @@ describe('F3 six genuinely different starting regions', () => {
     s.t = 10; s.rev++;
     const high = inc(s, 'verano', hotel);
     s.t = 2 * DAY + 10; s.rev++;
-    expect(high / inc(s, 'verano', hotel)).toBeCloseTo(1.8 / 0.6, 5);
+    expect(high / inc(s, 'verano', hotel)).toBeCloseTo(TOURISM_HIGH / TOURISM_LOW, 5);
+    expect(TOURISM_HIGH / TOURISM_LOW).toBeGreaterThanOrEqual(2);
     const cafe = place(s, 'solenne', 'cafe');
     const before = inc(s, 'solenne', cafe);
     expect(toggleOffshore(s, true).ok).toBe(false);

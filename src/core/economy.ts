@@ -6,8 +6,18 @@ import { getCity, type LotDef } from './city';
 import { laws, costIndex } from './laws';
 import { mechanicMult, taxRate } from './mechanics';
 import { MAX_LEVEL, TILL_SECONDS } from './constants';
+import { BAL, spread } from './balance';
 
-const GROWTH = 1.11;
+const GROWTH = BAL.upgradeGrowth;
+/** Upkeep added to every player business once the empire passes BAL.overheadFree businesses. */
+export const empireOverhead = (owned: number) => Math.min(BAL.overheadCap, BAL.overheadPerBiz * Math.max(0, owned - BAL.overheadFree));
+/** Price level of customers: cheap regions also earn less per sale (see BAL.incomeElasticity). */
+export const incomeIndex = (regionId: RegionId) => costIndex(regionId) ** BAL.incomeElasticity;
+export const demandMult = (regionId: RegionId, cat: BusinessDef['category']) => spread(REGION[regionId].economy.demand[cat], BAL.demandSpread);
+export function fitMult(regionId: RegionId, district: string, cat: BusinessDef['category']): number {
+  const d = REGION[regionId].districts.find((x) => x.id === district);
+  return spread(d?.fit[cat] ?? 1, BAL.fitSpread);
+}
 
 export function landPrice(state: GameState, regionId: RegionId, lot: LotDef): number {
   const d = REGION[regionId].districts.find((x) => x.id === lot.district)!;
@@ -18,7 +28,7 @@ export const bizCost = (state: GameState, regionId: RegionId, b: BusinessDef) =>
 
 /** Cost to go from `level` to `level + 1`. */
 export const upgradeCost = (state: GameState, regionId: RegionId, b: BusinessDef, level: number) =>
-  b.baseCost * costIndex(regionId) * laws(state, regionId).costMod * 0.55 * GROWTH ** (level - 1);
+  b.baseCost * costIndex(regionId) * laws(state, regionId).costMod * BAL.upgradeK * GROWTH ** (level - 1);
 
 /** Cost of n consecutive upgrades starting at `level`. */
 export function upgradeCostN(state: GameState, regionId: RegionId, b: BusinessDef, level: number, n: number): number {
@@ -33,7 +43,7 @@ export function maxAffordable(state: GameState, regionId: RegionId, b: BusinessD
 }
 export function milestoneMult(level: number): number {
   let m = 1;
-  if (level >= 10) m *= 2;
+  if (level >= 10) m *= 1.5;
   if (level >= 25) m *= 2;
   if (level >= 50) m *= 2;
   if (level >= 100) m *= 3;
@@ -68,6 +78,8 @@ export function allowedBiz(regionId: RegionId, lot: LotDef): BusinessDef[] {
 export interface LotIncome { gross: number; net: number; active: boolean; reason?: string; }
 export interface Derived {
   t: number; rev: number;
+  /** extra upkeep on every player business from empire size */
+  overhead: number;
   lots: Record<RegionId, Record<string, LotIncome>>;
   player: number;
   playerByRegion: Record<RegionId, number>;
@@ -115,17 +127,17 @@ function computeRegion(state: GameState, regionId: RegionId, out: Derived, T: nu
     const own = m.get(ls.owner) ?? 0;
     const competition = 1 / (1 + 0.12 * (total - own));
     const synergy = ls.owner === 'npc' ? 1 : 1 + Math.min(0.25, 0.05 * (own - 1));
-    const district = R.districts.find((d) => d.id === def.district)!;
     let gross =
-      b.baseIncome * ls.level * milestoneMult(ls.level) *
-      R.economy.demand[cat] * (district.fit[cat] ?? 1) * (L.categoryMods[cat] ?? 1) *
+      b.baseIncome * ls.level * milestoneMult(ls.level) * incomeIndex(regionId) *
+      demandMult(regionId, cat) * fitMult(regionId, def.district, cat) * (L.categoryMods[cat] ?? 1) *
       (b.tier <= 2 ? L.smallBizRelief : 1) * competition * synergy *
       mechanicMult(state, regionId, cat, ls.owner, T) * buffMult(state, T, regionId, cat, def.district, ls.owner);
     if (ls.owner === 'player') {
       gross *= 1 + state.rep / 500;
       if (state.entitlements.doubleIncome) gross *= 2;
     }
-    const upkeep = 0.12 * R.economy.wageIndex * L.minWage * (ls.owner === 'player' && regionId === 'ironhold' ? 1 + rs.vars.wageDeal : 1);
+    const upkeep = 0.12 * R.economy.wageIndex * L.minWage * (ls.owner === 'player' && regionId === 'ironhold' ? 1 + rs.vars.wageDeal : 1) +
+      (ls.owner === 'player' ? out.overhead : 0);
     let net = gross * Math.max(0.1, 1 - taxRate(state, regionId, ls.owner) - upkeep);
     if (ls.owner === 'player' && regionId === 'neonvale' && rs.vars.vcShare > 0) net *= 1 - rs.vars.vcShare;
     let active = true;
@@ -150,8 +162,11 @@ let cache: { state: GameState; d: Derived } | null = null;
 export function derived(state: GameState, force = false): Derived {
   const T = Math.floor(state.t);
   if (!force && cache && cache.state === state && cache.d.rev === state.rev && cache.d.t === T) return cache.d;
+  let owned = 0;
+  for (const id of REGION_IDS) for (const l of Object.values(state.regions[id].lots)) if (l.owner === 'player' && l.biz) owned++;
   const d: Derived = {
     t: T, rev: state.rev, lots: {} as Derived['lots'], player: 0,
+    overhead: empireOverhead(owned),
     playerByRegion: {} as Derived['playerByRegion'], rivals: {},
   };
   for (const id of REGION_IDS) computeRegion(state, id, d, T);

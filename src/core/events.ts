@@ -7,6 +7,7 @@ import { getCity } from './city';
 import { derived, lotValue } from './economy';
 import { costIndex } from './laws';
 import { standingDelta } from './politics';
+import { FUEL_MAX, FUEL_MIN, HYPE_MAX, HYPE_MIN } from './mechanics';
 import { chance, next, pick, range, weighted } from './rng';
 import { notify } from './notify';
 import { duration, money } from './format';
@@ -122,8 +123,8 @@ function applyOutcome(state: GameState, pe: PendingEvent, o: Outcome): void {
     if (lotId) state.regions[rid].lots[lotId].frozenUntil = state.t + o.freeze;
   }
   if (o.mood) state.regions.ironhold.vars.unionMood = Math.min(100, Math.max(0, state.regions.ironhold.vars.unionMood + o.mood));
-  if (o.hype) state.regions.neonvale.vars.hype = Math.min(1.7, Math.max(0.6, state.regions.neonvale.vars.hype + o.hype));
-  if (o.fuel) state.regions.redmesa.vars.fuelIndex = Math.min(2.2, Math.max(0.45, state.regions.redmesa.vars.fuelIndex + o.fuel));
+  if (o.hype) state.regions.neonvale.vars.hype = Math.min(HYPE_MAX, Math.max(HYPE_MIN, state.regions.neonvale.vars.hype + o.hype));
+  if (o.fuel) state.regions.redmesa.vars.fuelIndex = Math.min(FUEL_MAX, Math.max(FUEL_MIN, state.regions.redmesa.vars.fuelIndex + o.fuel));
   if (o.insure) state.regions.verano.vars.insuredUntil = state.t + o.insure;
   switch (o.special) {
     case 'acceptOffer': {
