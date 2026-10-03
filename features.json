@@ -126,8 +126,8 @@
       "title": "Playable hosted build",
       "acceptance": "Single-file build under 2 MB with PWA manifest; Capacitor config present; published playtest link works",
       "verify": "npm run build:single && node scripts/check-single.mjs",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "2026-10-03: npm run build:single && node scripts/check-single.mjs -> OK 0.96 MB, inline manifest, no relative assets, no test hook. Smoke-tested dist-single over http in Chromium: 6 region cards, start Amberfield, 5 hustles, fonts loaded, 0 errors. capacitor.config.ts present. Published (workspace members) at https://bridgeton-grants.viktor.page/borderline-rich — link answers 302 to the workspace sign-in gate (content behind the gate not fetchable from the sandbox)."
     },
     {
       "id": "F17",

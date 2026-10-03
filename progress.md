@@ -34,3 +34,10 @@
 - e2e: playwright.config.ts + e2e/{world,controls,ui}.spec.ts. VERIFIED: world 7/7, controls 1/1, ui 1/1 passed; npm run ci green (12 files / 80 tests).
 - Bugs caught by screenshots: sheets photographed mid-animation (test now waits), CoinBurst.emit(n) called n times (18x too many coins), toasts covering the goal and sheets, rival-move toast spam (now max 1 per 25 s; full feed in Rivals -> News).
 - ASSUMED: deal radius 26 m without a broker (walk-up buying makes the open world matter; Go there auto-walks).
+
+## 2026-10-03 07:25 UTC — T9 hosted build
+- public/ icon.svg + 192/512 PNGs (rasterised with Playwright), manifest.webmanifest; vite `inlinePwa` plugin inlines manifest + icons as data: URLs in the single-file build.
+- scripts/check-single.mjs (npm run check:single). VERIFIED: 0.96 MB, manifest inline, no relative assets, no __BR hook.
+- VERIFIED local smoke of dist-single over http: region select -> Amberfield -> hustle, fonts loaded, 0 console errors.
+- capacitor.config.ts (plain data until @capacitor/* is installed in M3) and docs/IAP.md (product ids, NativeStore plan, owner actions).
+- Published https://bridgeton-grants.viktor.page/borderline-rich (access: workspace members). VERIFIED the URL answers 302 to the sign-in gate; ASSUMED it renders like the local smoke once signed in.
