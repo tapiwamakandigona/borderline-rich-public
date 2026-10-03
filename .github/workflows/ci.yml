@@ -75,7 +75,9 @@ jobs:
           VERSION=$(node -p "require('../package.json').version")
           TASK=assembleRelease
           [ -n "${BR_KEYSTORE_FILE:-}" ] || TASK=assembleDebug
-          ./gradlew --no-daemon "$TASK" -PversionCode=${{ github.run_number }} -PversionName="$VERSION-build.${{ github.run_number }}"
+          # Release builds also produce the Play Store bundle (AAB) from the same key and version.
+          [ "$TASK" = assembleRelease ] && TASK="assembleRelease bundleRelease"
+          ./gradlew --no-daemon $TASK -PversionCode=${{ github.run_number }} -PversionName="$VERSION-build.${{ github.run_number }}"
       - name: Verify signature and manifest
         run: |
           APK=$(find android/app/build/outputs/apk -name '*.apk' ! -name '*unsigned*' | head -1)
@@ -84,9 +86,16 @@ jobs:
           "$BT/apksigner" verify --print-certs "$APK"
           "$BT/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label|launchable-activity)"
           mkdir -p out && cp "$APK" out/borderline-rich.apk
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ -f "$AAB" ]; then
+            jarsigner -verify -certs "$AAB" | tail -3
+            cp "$AAB" out/borderline-rich.aab
+          fi
           ls -l out
       - uses: actions/upload-artifact@v4
         with: { name: borderline-rich-apk, path: out/borderline-rich.apk, retention-days: 30 }
+      - uses: actions/upload-artifact@v4
+        with: { name: borderline-rich-aab, path: out/borderline-rich.aab, retention-days: 30, if-no-files-found: ignore }
 
   device-smoke:
     if: ${{ !github.event.repository.private }}
@@ -124,6 +133,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { name: borderline-rich-apk, path: out }
+      - uses: actions/download-artifact@v4
+        with: { name: borderline-rich-aab, path: out }
+        continue-on-error: true
       - name: Publish the rolling "playtest" pre-release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -140,5 +152,5 @@ jobs:
 
           In-app purchases in this build are sandbox purchases: no real money is charged.
           EOF
-          gh release create playtest out/borderline-rich.apk --target "$GITHUB_SHA" --prerelease \
+          gh release create playtest out/borderline-rich.* --target "$GITHUB_SHA" --prerelease \
             --title "Playtest build #${{ github.run_number }}" --notes-file notes.md

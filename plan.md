@@ -105,6 +105,11 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
   - [ ] T12e Region goal chains: the first 10–20 min of goals teach each region's signature [new 8; prior 2] (F3, F10)
   - [ ] T12f Visuals: follow-camera framing, readable Neon Vale day, Amberfield meadow ground [new 6; prior 6] (F13)
   - [ ] T12g Re-run the critic until PASS
+- [x] T13 Mobile performance + Play Store bundle (owner request 2026-10-03 19:59 UTC): per-lot geometry
+      cache (a chunk rebuild concatenates cached lots; 1-lot sync 333 → 125 ms, full city 1477 → 208 ms
+      at 4× CPU throttle, SwiftShader), medium = no tree shadows + shadow map every 2nd frame, adaptive
+      fallback drops shadows after 4 s at min DPR under 40 fps, 120 Hz screens paced to 60 fps;
+      CI also builds the signed AAB (`bundleRelease`) for Google Play (app "Borderline Rich", com.borderlinerich.game)
 
 ## 5. How to verify (definition of done)
 

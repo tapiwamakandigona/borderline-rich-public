@@ -459,7 +459,7 @@ export function buildScenery(layout: CityLayout, theme: Theme, q: QualityPreset,
       col.setHex(theme.treeColors[Math.floor(next(r) * theme.treeColors.length)]).lerp(new THREE.Color(1, 1, 1), 0.55);
       inst.setColorAt(i, col);
     });
-    inst.castShadow = true;
+    inst.castShadow = q.treeShadows;
     inst.receiveShadow = true;
     group.add(inst);
     disposables.push(g);

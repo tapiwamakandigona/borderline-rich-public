@@ -19,7 +19,7 @@ import { money } from '../core/format';
 import { SandboxStore, type KeyValue, type Store } from '../iap/store';
 import { fulfill, restoreEntitlements } from '../iap/fulfill';
 import type { Product } from '../iap/catalog';
-import type { QualityName } from '../world/quality';
+import { FramePacer, type QualityName } from '../world/quality';
 
 export const SAVE_KEY = 'br.save.v1';
 const SETTINGS_KEY = 'br.settings.v1';
@@ -86,6 +86,7 @@ export class Session {
   private eventSeen: string | null = null;
   private showT = 55;
   private raf = 0;
+  private pacer = new FramePacer();
 
   /** @param joyLayer element that hosts the floating joystick (never the Preact root). */
   constructor(readonly canvas: HTMLCanvasElement, joyLayer: HTMLElement) {
@@ -161,6 +162,7 @@ export class Session {
   // ── Frame loop ─────────────────────────────────────────────────────────────
   private frame = (now: number): void => {
     this.raf = requestAnimationFrame(this.frame);
+    if (!this.pacer.tick(now)) return; // 120 Hz screens: render at 60 (dt spans both frames)
     const dt = Math.min(0.25, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     const s = this.state;

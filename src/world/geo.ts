@@ -112,24 +112,46 @@ export class GeoBuilder {
     this.add(bucket, g, color, x, y, z, 0, 0, 0, 1, sy, 1);
   }
 
-  /** Merge every bucket into a single mesh per material. */
-  build(materials: Partial<Record<Bucket, THREE.Material>>): THREE.Mesh[] {
-    const out: THREE.Mesh[] = [];
+  /** Merge each bucket's parts into one non-indexed geometry (parts are disposed). Used to cache a
+   *  single lot's geometry so a chunk rebuild only concatenates arrays (see World.buildChunk). */
+  mergeParts(): Partial<Record<Bucket, THREE.BufferGeometry>> {
+    const out: Partial<Record<Bucket, THREE.BufferGeometry>> = {};
     for (const b of BUCKETS) {
       const list = this.parts[b];
-      const mat = materials[b];
-      if (!list.length || !mat) continue;
+      if (!list.length) continue;
       const merged = mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)), false);
       for (const g of list) g.dispose();
-      if (!merged) continue;
-      merged.computeBoundingSphere();
-      const mesh = new THREE.Mesh(merged, mat);
-      mesh.name = 'city-' + b;
-      mesh.castShadow = b !== 'glow';
-      mesh.receiveShadow = true;
-      mesh.matrixAutoUpdate = false;
-      out.push(mesh);
+      this.parts[b] = [];
+      if (merged) out[b] = merged;
     }
     return out;
   }
+
+  /** Merge every bucket into a single mesh per material. */
+  build(materials: Partial<Record<Bucket, THREE.Material>>): THREE.Mesh[] {
+    const merged = this.mergeParts();
+    return meshesFrom(BUCKETS.map((b) => ({ [b]: merged[b] })), materials, true);
+  }
+}
+
+/** One mesh per material from per-bucket geometry lists (non-indexed, same attributes).
+ *  `owned` disposes the inputs; cached inputs are left untouched. */
+export function meshesFrom(sets: Partial<Record<Bucket, THREE.BufferGeometry>>[], materials: Partial<Record<Bucket, THREE.Material>>, owned = false): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  for (const b of BUCKETS) {
+    const mat = materials[b];
+    const list = sets.map((x) => x[b]).filter((g): g is THREE.BufferGeometry => !!g);
+    if (!list.length || !mat) continue;
+    const merged = list.length === 1 && owned ? list[0] : mergeGeometries(list, false);
+    if (owned && merged !== list[0]) for (const g of list) g.dispose();
+    if (!merged) continue;
+    merged.computeBoundingSphere();
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.name = 'city-' + b;
+    mesh.castShadow = b !== 'glow';
+    mesh.receiveShadow = true;
+    mesh.matrixAutoUpdate = false;
+    out.push(mesh);
+  }
+  return out;
 }

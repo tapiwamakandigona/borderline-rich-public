@@ -6,7 +6,7 @@ import { DAY } from '../core/constants';
 import { makeRng } from '../core/rng';
 import { THEMES, type Theme } from './themes';
 import { facade, storefront } from './textures';
-import { GeoBuilder, type Bucket } from './geo';
+import { GeoBuilder, meshesFrom, type Bucket } from './geo';
 import { buildLots, levelBand, type LotVisual } from './buildings';
 import { buildScenery, type SceneryHandles } from './scenery';
 import { CoinBurst, Pedestrians, Smoke, Traffic, Weather } from './life';
@@ -15,8 +15,9 @@ import { Player } from './player';
 import { CameraRig } from './camera';
 import { AdaptiveResolution, QUALITY, type QualityName, type QualityPreset } from './quality';
 
-export interface WorldStats { calls: number; triangles: number; dpr: number; fps: number; quality: QualityName; rebuilds: number; rebuildMs: number; chunks: number; }
+export interface WorldStats { calls: number; triangles: number; dpr: number; fps: number; quality: QualityName; rebuilds: number; rebuildMs: number; chunks: number; shadows: boolean; }
 /** The city is merged per chunk of 2×2 blocks, so a lot change rebuilds ~1/9–1/6 of the city. */
+interface LotGeo { key: string; parts: Partial<Record<Bucket, THREE.BufferGeometry>>; vis: LotVisual; chimneys: THREE.Vector3[] }
 interface Chunk { defs: LotDef[]; meshes: THREE.Mesh[]; chimneys: THREE.Vector3[]; sig: string }
 const CHUNK_BLOCKS = 2;
 /** A lot lifted out of its merged chunk for a squash-and-stretch animation (critic #12). */
@@ -44,6 +45,7 @@ export class World {
   private city = new THREE.Group();
   private visuals = new Map<string, LotVisual>();
   private chunks: Chunk[] = [];
+  private lotCache = new Map<string, LotGeo>();
   private solos = new Map<string, Solo>();
   private lastLots: Record<string, LotState> | null = null;
   private ownerSig = '';
@@ -58,6 +60,7 @@ export class World {
   private sun = new THREE.DirectionalLight(0xffffff, 2.5);
   private time = 0;
   private fps = { acc: 0, n: 0, value: 60 };
+  private frameNo = 0;
   private lastStats = { calls: 0, triangles: 0 };
   private env: THREE.Texture | null = null;
   readonly envState = { night: 0, dusk: 0, sunDir: new THREE.Vector3(0, 1, 0) };
@@ -80,6 +83,9 @@ export class World {
       c.left = c.bottom = -85; c.right = c.top = 85; c.near = 10; c.far = 420;
       this.sun.shadow.bias = -0.0006;
       this.sun.shadow.normalBias = 0.6;
+      // Medium re-renders the shadow map every other frame: the sun moves slowly, and the shadow
+      // pass draws every caster a second time.
+      this.renderer.shadowMap.autoUpdate = this.quality.shadowEvery <= 1;
     }
     this.scene.add(this.hemi, this.sun, this.sun.target, this.city, this.markers.group, this.coins.mesh, this.player.group);
     this.player.group.visible = false;
@@ -97,6 +103,7 @@ export class World {
     this.regionDisposables = [];
     if (this.scenery) { this.scene.remove(this.scenery.group); this.scenery.dispose(); this.scenery = null; }
     for (const m of [...this.city.children]) { this.city.remove(m); (m as THREE.Mesh).geometry?.dispose(); }
+    this.clearLotCache();
     for (const x of [this.traffic, this.peds, this.weather, this.smoke]) x?.dispose();
     if (this.traffic) this.scene.remove(this.traffic.body, this.traffic.lights);
     if (this.peds) this.scene.remove(this.peds.bodies, this.peds.heads);
@@ -208,15 +215,35 @@ export class World {
     return s;
   }
 
+  /** A lot's merged geometry, rebuilt only when its look changes. A chunk rebuild then just
+   *  concatenates cached arrays instead of regenerating every building in the chunk. */
+  private lotGeo(def: LotDef, lots: Record<string, LotState> | null): LotGeo {
+    const ls = lots?.[def.id];
+    const key = World.lotSig(ls) + (ls?.owner === 'vacant' ? 'v' : '') + (lots ? '' : '*');
+    const hit = this.lotCache.get(def.id);
+    if (hit && hit.key === key) return hit;
+    if (hit) for (const g of Object.values(hit.parts)) g.dispose();
+    const gb = new GeoBuilder();
+    const out = buildLots(gb, this.layout!, lots, this.theme!, [def]);
+    const geo: LotGeo = { key, parts: gb.mergeParts(), vis: out.lots.get(def.id)!, chimneys: out.chimneys };
+    this.lotCache.set(def.id, geo);
+    return geo;
+  }
+
+  private clearLotCache(): void {
+    for (const e of this.lotCache.values()) for (const g of Object.values(e.parts)) g.dispose();
+    this.lotCache.clear();
+  }
+
   private buildChunk(c: Chunk, lots: Record<string, LotState> | null): void {
     const t0 = performance.now();
     for (const m of c.meshes) { this.city.remove(m); m.geometry.dispose(); }
-    const gb = new GeoBuilder();
-    const out = buildLots(gb, this.layout!, lots, this.theme!, this.solos.size ? c.defs.filter((d) => !this.solos.has(d.id)) : c.defs);
-    c.meshes = gb.build(this.mats!);
+    const defs = this.solos.size ? c.defs.filter((d) => !this.solos.has(d.id)) : c.defs;
+    const geos = defs.map((d) => this.lotGeo(d, lots));
+    c.meshes = meshesFrom(geos.map((g) => g.parts), this.mats!);
     for (const m of c.meshes) this.city.add(m);
-    for (const [id, v] of out.lots) this.visuals.set(id, v);
-    c.chimneys = out.chimneys;
+    defs.forEach((d, i) => this.visuals.set(d.id, geos[i].vis));
+    c.chimneys = geos.flatMap((g) => g.chimneys);
     c.sig = this.chunkSig(c, lots);
     const ms = performance.now() - t0;
     this.perf.rebuilds++; this.perf.lastMs = ms; this.perf.maxMs = Math.max(this.perf.maxMs, ms);
@@ -455,15 +482,27 @@ export class World {
     this.coins.update(dt);
     if (this.solos.size) this.updateSolos(dt);
     this.markers.update(this.time);
+    if (!this.renderer.shadowMap.autoUpdate) this.renderer.shadowMap.needsUpdate = this.frameNo % this.quality.shadowEvery === 0;
+    this.frameNo++;
     this.renderer.render(this.scene, this.rig.camera);
     this.lastStats = { calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles };
     this.fps.acc += dt; this.fps.n++;
     if (this.fps.acc >= 1) { this.fps.value = this.fps.n / this.fps.acc; this.fps.acc = 0; this.fps.n = 0; }
     if (this.adaptive.sample(dt)) this.renderer.setPixelRatio(this.adaptive.dpr);
+    // Still under ~40 fps at the lowest resolution for 4 s: shadows are the next biggest cost.
+    if (this.adaptive.starved >= 2 && this.sun.castShadow) this.dropShadows();
+  }
+
+  /** Turn shadows off for the rest of the session (one shader recompile, then a lighter frame). */
+  private dropShadows(): void {
+    this.sun.castShadow = false;
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.renderer.shadowMap.enabled = false;
   }
 
   stats(): WorldStats {
-    return { ...this.lastStats, dpr: this.renderer.getPixelRatio(), fps: this.fps.value, quality: this.quality.name, rebuilds: this.perf.rebuilds, rebuildMs: this.perf.lastMs, chunks: this.chunks.length };
+    return { ...this.lastStats, dpr: this.renderer.getPixelRatio(), fps: this.fps.value, quality: this.quality.name, rebuilds: this.perf.rebuilds, rebuildMs: this.perf.lastMs, chunks: this.chunks.length, shadows: this.sun.castShadow };
   }
 
   dispose(): void {

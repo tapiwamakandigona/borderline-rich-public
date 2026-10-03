@@ -118,3 +118,21 @@
 - rm_nephew "Refuse" no longer promises "Your next permit may take a while" (one refusal, −15 from neutral, never reaches ENEMY_STANDING −25, so permits were unchanged). New text warns that a second clash slows permits, which is what `permitWait` does (×1.5 at enemy standing).
 - New tests/text-truth.test.ts (3 tests). VERIFIED revert check: they fail with the changes stashed, pass with them. No existing test edited.
 - VERIFIED locally: `npm run ci` 14 files / 106 tests green, build OK, check_budget 20,752 bytes (limit 32,000).
+
+## 2026-10-03 ~20:20 UTC — T13 mobile performance + Play AAB (Viktor)
+- Owner: "Borderline Rich should be on the Play Store … not well optimised like Emberdelve".
+- Profiled real play in headless Chromium, 4× CPU throttle (`Profiler` + `__BR.rebuildProbe`). Biggest CPU spike:
+  every lot change regenerated every building in its chunk (THREE primitives → toNonIndexed → merge).
+- Fix: `World.lotGeo` caches each lot's merged per-bucket geometry keyed by its look (lotSig + vacant + showcase);
+  `buildChunk` just concatenates (`meshesFrom`). Same RNG per lot, so identical output (tests/perf.test.ts compares
+  vertex counts/sums against the old whole-chunk build).
+- VERIFIED (4× throttle, SwiftShader, medium): 1-lot sync 333.6 → 124.7 ms (solenne), 332 → 151.7 ms (ironhold);
+  full city rebuild 1477 → 208 ms and 1360 → 297 ms.
+- Quality: medium no longer casts tree shadows (instanced, never culled per tree) and re-renders the shadow map every
+  2nd frame; `AdaptiveResolution.starved` → `World.dropShadows()` after 2 windows at min DPR still < 40 fps;
+  `FramePacer` renders every other rAF only above 100 Hz (120 Hz phones → 60 fps; 60/90 Hz unchanged).
+- CI apk job also runs `bundleRelease` with the same key/version, verifies with jarsigner, uploads `borderline-rich-aab`
+  and attaches it to the playtest release. Play Console app created: "Borderline Rich" (com.borderlinerich.game,
+  app id 4975048660131277373, game, free).
+- Gate: `npm run ci` green — 15 files / 113 tests, boot set 20,752 bytes. e2e runs in public CI. ASSUMED: device fps
+  gains (no phone here); SwiftShader timings are not device timings.
