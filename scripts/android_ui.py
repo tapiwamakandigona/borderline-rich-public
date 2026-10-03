@@ -3,15 +3,24 @@
 
   android_ui.py ui.xml find REGEX   -> prints "x y": centre of the first on-screen node whose
                                        text or content-desc matches REGEX; exit 1 if none
-  android_ui.py ui.xml money        -> prints the largest plain money label ("$17.8", "$1.2K")
-                                       on screen as a number, exit 1 if none
+  android_ui.py ui.xml money        -> prints the HUD cash as a number: the money card, which the
+                                       WebView exposes as one node holding cash then income
+                                       ("$3.2$0/s"); else the largest plain money label ("$17.8",
+                                       "$1.2K"); exit 1 if neither is found
 Used by scripts/android-smoke.sh in the CI device-smoke job.
 """
 import re
 import sys
 import xml.etree.ElementTree as ET
 
-UNITS = {'': 1, 'K': 1e3, 'M': 1e6, 'B': 1e9, 'T': 1e12}
+UNITS = {'': 1, 'K': 1e3, 'M': 1e6, 'B': 1e9, 'T': 1e12, 'Q': 1e15}  # src/core/format.ts money()
+AMOUNT = r'\$([\d,]+(?:\.\d+)?)([KMBTQ]?)'
+CARD = re.compile(AMOUNT + r'\s*[+−-]?\$[\d,]+(?:\.\d+)?[KMBTQ]?/s')  # "$3.2$0/s": cash, then income
+PLAIN = re.compile(AMOUNT)
+
+
+def amount(m):
+    return float(m.group(1).replace(',', '')) * UNITS[m.group(2)]
 
 
 def nodes(path):
@@ -43,15 +52,16 @@ def main():
                 return 0
         return 1
     if mode == 'money':
-        best = None
-        for n in nodes(path):
-            m = re.fullmatch(r'\$([\d,]+(?:\.\d+)?)([KMBT]?)', (n.get('text') or '').strip())
+        texts = [(n.get('text') or '').strip() for n in nodes(path)]
+        for t in texts:
+            m = CARD.fullmatch(t)
             if m:
-                v = float(m.group(1).replace(',', '')) * UNITS[m.group(2)]
-                best = v if best is None else max(best, v)
-        if best is None:
+                print(amount(m))
+                return 0
+        plain = [amount(m) for m in map(PLAIN.fullmatch, texts) if m]
+        if not plain:
             return 1
-        print(best)
+        print(max(plain))
         return 0
     return 2
 

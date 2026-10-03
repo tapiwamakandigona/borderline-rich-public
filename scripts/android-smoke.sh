@@ -13,7 +13,17 @@ mkdir -p "$OUT"
 finish() { adb logcat -d > "$OUT/logcat.txt" 2>/dev/null || true; }
 fail() { echo "SMOKE FAIL: $*"; shot "fail"; finish; exit 1; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png" 2>/dev/null || true; }
-dump() { adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 && adb shell cat /sdcard/ui.xml > "$OUT/$1.xml" 2>/dev/null; }
+# dump NAME: accessibility tree → $OUT/NAME.xml; non-zero when uiautomator produced none. While the 3D
+# scene animates, uiautomator often gives up ("could not get idle state") without writing a file, so
+# delete the previous dump first; otherwise the stale one is read back as if it were current.
+dump() {
+  adb shell rm -f /sdcard/ui.xml > /dev/null 2>&1
+  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
+  adb shell cat /sdcard/ui.xml > "$OUT/$1.xml" 2>/dev/null
+  grep -q '<hierarchy' "$OUT/$1.xml"
+}
+# fresh NAME TRIES: retry dump until uiautomator delivers a tree.
+fresh() { local i; for ((i = 0; i < $2; i++)); do dump "$1" && return 0; sleep 2; done; return 1; }
 # wait_for NAME REGEX TRIES: poll the accessibility tree until a node matches; prints "x y".
 wait_for() {
   local i xy
@@ -43,12 +53,22 @@ adb shell input tap $XY
 
 HX=$(wait_for 2-city '^Hustle$' 30) || fail "no Hustle button after Start"
 sleep 4; shot 2-city
-BEFORE=$($UI "$OUT/2-city.xml" money || echo 0)
-for _ in 1 2 3 4 5 6 7 8; do adb shell input tap $HX; sleep 0.5; done
-sleep 3; dump 3-hustle; shot 3-hustle
-AFTER=$($UI "$OUT/3-hustle.xml" money || echo 0)
+BEFORE=$($UI "$OUT/2-city.xml" money) || fail "no cash label in the city UI dump"
+AFTER=$BEFORE
+rose() { python3 -c "import sys; sys.exit(0 if float('$AFTER') > float('$BEFORE') else 1)"; }
+for _round in 1 2 3; do
+  for _ in 1 2 3 4; do adb shell input tap $HX; sleep 0.5; done
+  sleep 3
+  fresh 3-hustle 5 || continue
+  AFTER=$($UI "$OUT/3-hustle.xml" money || echo "$BEFORE")
+  rose && break
+  # The software-rendered emulator can stall the WebView for over a second, so a tap may count as
+  # Hustle's 550 ms long-press, which opens Empire > Upgrades over the button. Close it and go again.
+  if CX=$($UI "$OUT/3-hustle.xml" find '^Close$'); then adb shell input tap $CX; sleep 2; fi
+done
+shot 3-hustle
 echo "cash before=$BEFORE after=$AFTER"
-python3 -c "import sys; sys.exit(0 if float('$AFTER') > float('$BEFORE') else 1)" || fail "hustle taps did not raise cash"
+rose || fail "hustle taps did not raise cash"
 
 adb shell pidof "$PKG" > /dev/null || fail "app process is gone"
 finish
