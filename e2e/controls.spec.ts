@@ -75,7 +75,17 @@ test('touch controls drive the player and camera', async ({ page }) => {
   const screen = () => page.evaluate((id) => (window as unknown as { __BR: BR }).__BR.lotScreen(id), lot) as Promise<{ x: number; y: number; on: boolean }>;
   await expect.poll(async () => (await screen()).on, { timeout: 15_000 }).toBe(true);
   await page.waitForTimeout(300);
-  await tapAt(page, cdp, await screen());
+  // Simulate a janky device/CI runner: every frame blocks the main thread for 400 ms. A quick tap
+  // must still count as a tap (gesture timing comes from event timestamps, not handler time).
+  const target = await screen();
+  await page.evaluate(() => {
+    const w = window as unknown as { __jank?: boolean };
+    w.__jank = true;
+    const jank = () => { if (!w.__jank) return; const t = performance.now(); while (performance.now() - t < 400) { /* busy */ } requestAnimationFrame(jank); };
+    requestAnimationFrame(jank);
+  });
+  await tapAt(page, cdp, target);
+  await page.evaluate(() => { (window as unknown as { __jank?: boolean }).__jank = false; });
   await expect(page.locator('[data-testid="lot-card"]')).toBeVisible();
   inView(await box(page, '[data-testid="lot-card"]'), 'lot card');
   await page.screenshot({ path: 'e2e/__shots__/controls-lotcard.png' });

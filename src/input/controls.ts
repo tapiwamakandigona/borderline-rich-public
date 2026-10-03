@@ -58,7 +58,9 @@ export class Controls {
     if (!this.gestured) { this.gestured = true; this.h.onFirstGesture(); }
     const rect = this.el.getBoundingClientRect();
     const leftHalf = e.clientX - rect.left < rect.width * 0.5;
-    const p: Ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false, joy: leftHalf && !this.hasJoy() && e.button !== 2 };
+    // Gesture timing uses the events' own timestamps, so a slow frame (busy main thread) can't
+    // turn a quick tap into a "long press" (seen on CI and on janky low-end phones).
+    const p: Ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: false, joy: leftHalf && !this.hasJoy() && e.button !== 2 };
     this.ptrs.set(e.pointerId, p);
     try { this.el.setPointerCapture(e.pointerId); } catch { /* synthetic pointers may not capture */ }
     const free = [...this.ptrs.values()].filter((q) => !q.joy);
@@ -72,7 +74,7 @@ export class Controls {
     p.x = e.clientX; p.y = e.clientY;
     if (!p.moved && Math.hypot(p.x - p.sx, p.y - p.sy) > TAP_SLOP) p.moved = true;
     if (p.joy) {
-      if (!p.moved && performance.now() - p.t < 120) return;
+      if (!p.moved && e.timeStamp - p.t < 120) return;
       const v = new THREE.Vector2(p.x - p.sx, p.y - p.sy);
       const len = v.length();
       if (len > JOY_R) v.multiplyScalar(JOY_R / len);
@@ -96,7 +98,7 @@ export class Controls {
     if (!p) return;
     this.ptrs.delete(e.pointerId);
     if (p.joy) { this.joyVec.set(0, 0); this.base.classList.remove('on'); }
-    const quick = performance.now() - p.t < TAP_MS && !p.moved;
+    const quick = e.timeStamp - p.t < TAP_MS && !p.moved;
     if (quick && e.type === 'pointerup' && this.ptrs.size === 0) this.h.onTap(e.clientX, e.clientY);
     if ([...this.ptrs.values()].filter((q) => !q.joy).length < 2) this.pinch = 0;
   };

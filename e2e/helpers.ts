@@ -43,8 +43,12 @@ export async function swipe(page: Page, cdp: CDPSession, from: Pt, to: Pt, steps
   await touch(cdp, 'touchEnd', []);
 }
 
+/** A 40 ms tap. Like real touch hardware, the events carry their own timestamps (CDP otherwise
+ *  stamps touchEnd only after the page has processed touchStart, which on a slow runner turns a
+ *  tap into a "long press"). */
 export async function tapAt(page: Page, cdp: CDPSession, p: Pt): Promise<void> {
-  await touch(cdp, 'touchStart', [p]);
+  const t0 = Date.now() / 1000;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: t0 });
   await page.waitForTimeout(40);
-  await touch(cdp, 'touchEnd', []);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: t0 + 0.04 });
 }
