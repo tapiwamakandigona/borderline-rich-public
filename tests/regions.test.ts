@@ -11,6 +11,7 @@ import { buyVacant, expeditePermit, toggleOffshore } from '../src/core/actions';
 import { advance } from '../src/core/sim';
 import { HYPE_MAX, HYPE_MIN, SEASON_MULT, TOURISM_HIGH, TOURISM_LOW, mechanicsTick } from '../src/core/mechanics';
 import type { GameState, RegionId } from '../src/core/types';
+import { THEMES } from '../src/world/themes';
 
 /** Put a player business directly on the first vacant lot that allows it. */
 function place(s: GameState, r: RegionId, bizId: string, level = 1): string {
@@ -40,6 +41,23 @@ describe('F3 six genuinely different starting regions', () => {
       for (const rv of r.rivals) expect(r.factions.some((f) => f.id === rv.favFaction), rv.id).toBe(true);
       const own = EVENTS.filter((e) => e.region === r.id && !e.system);
       expect(own.length, r.id).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('every region has its own visual theme (architecture, outskirts, palette)', () => {
+    const ids = REGIONS.map((r) => r.id);
+    const rgb = (c: number) => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+    const dist = (a: number, b: number) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+    for (const id of ids) expect(THEMES[id].id).toBe(id);
+    // Architecture and landscape: every region has a unique roof style, window style and outskirts.
+    for (const key of ['roofStyle', 'windowStyle', 'outskirts'] as const) {
+      expect(new Set(ids.map((id) => THEMES[id][key])).size).toBe(6);
+    }
+    // Palette: any two regions differ clearly in ground or sky colour (RGB distance > 40).
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      const a = THEMES[ids[i]], b = THEMES[ids[j]];
+      const d = Math.max(dist(a.ground, b.ground), dist(a.sky.day.zenith, b.sky.day.zenith), dist(a.walls[0], b.walls[0]));
+      expect(d, `${ids[i]} vs ${ids[j]}`).toBeGreaterThan(40);
     }
   });
 

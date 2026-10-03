@@ -1,0 +1,42 @@
+// Graphics presets + adaptive resolution. Headless/SwiftShader timings are not device timings.
+export type QualityName = 'low' | 'medium' | 'high';
+export interface QualityPreset {
+  name: QualityName;
+  maxDpr: number;
+  shadows: number; // shadow map size, 0 = off
+  cars: number;
+  peds: number;
+  props: number; // tree density multiplier
+  weather: number; // particle count
+  antialias: boolean;
+}
+export const QUALITY: Record<QualityName, QualityPreset> = {
+  low: { name: 'low', maxDpr: 1, shadows: 0, cars: 18, peds: 0, props: 0.6, weather: 300, antialias: false },
+  medium: { name: 'medium', maxDpr: 1.5, shadows: 1024, cars: 36, peds: 36, props: 0.9, weather: 700, antialias: false },
+  high: { name: 'high', maxDpr: 2, shadows: 2048, cars: 60, peds: 70, props: 1, weather: 1400, antialias: true },
+};
+export function defaultQuality(): QualityName {
+  if (typeof navigator === 'undefined') return 'medium';
+  const touch = 'ontouchstart' in globalThis || navigator.maxTouchPoints > 0;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  if (touch && mem <= 3) return 'low';
+  return touch ? 'medium' : 'high';
+}
+
+/** Lowers/raises device-pixel ratio to hold ~60 fps (or ~40 on weak devices). */
+export class AdaptiveResolution {
+  private acc = 0;
+  private frames = 0;
+  dpr: number;
+  constructor(private max: number, private min = 0.75) { this.dpr = max; }
+  sample(dt: number): boolean {
+    this.acc += dt; this.frames++;
+    if (this.acc < 2) return false;
+    const avg = this.acc / this.frames;
+    this.acc = 0; this.frames = 0;
+    const before = this.dpr;
+    if (avg > 1 / 40 && this.dpr > this.min) this.dpr = Math.max(this.min, this.dpr - 0.25);
+    else if (avg < 1 / 75 && this.dpr < this.max) this.dpr = Math.min(this.max, this.dpr + 0.25);
+    return before !== this.dpr;
+  }
+}
