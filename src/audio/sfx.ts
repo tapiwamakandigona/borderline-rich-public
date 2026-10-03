@@ -23,6 +23,10 @@ export class Sfx {
     this.master.connect(comp).connect(this.ctx.destination);
   }
 
+  /** Shared with the music loop (null until the first gesture unlocks audio). */
+  get context(): AudioContext | null { return this.ctx; }
+  get output(): AudioNode | null { return this.master; }
+
   private vary(f: number): number { return f * (1 + (Math.random() * 2 - 1) * JUICE.pitchVariation); }
 
   private tone(freq: number, at: number, dur: number, type: OscillatorType, vol: number, slideTo?: number): void {

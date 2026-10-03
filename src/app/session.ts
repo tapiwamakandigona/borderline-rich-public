@@ -4,6 +4,7 @@ import { signal } from '@preact/signals';
 import * as THREE from 'three';
 import { World } from '../world/World';
 import { Controls } from '../input/controls';
+import { Music } from '../audio/music';
 import { Sfx, type SfxName } from '../audio/sfx';
 import { JUICE, setReducedMotion } from '../ui/juice';
 import type { ActionResult, GameState, RegionId } from '../core/types';
@@ -51,6 +52,7 @@ export class Session {
   readonly world: World;
   readonly controls: Controls;
   readonly sfx = new Sfx();
+  readonly music = new Music();
   readonly store: Store;
   readonly settings = signal<Settings>(loadSettings());
   readonly screen = signal<Screen>('select');
@@ -93,12 +95,13 @@ export class Session {
     const st = this.settings.value;
     setReducedMotion(st.reducedMotion);
     this.sfx.enabled = st.sound;
+    this.music.setEnabled(st.sound);
     this.world = new World(canvas, st.quality);
     this.controls = new Controls(canvas, joyLayer, {
       onTap: (x, y) => this.tap(x, y),
       onOrbit: (dx, dy) => this.world.rig.orbit(dx, dy),
       onZoom: (f) => this.world.rig.zoom(f),
-      onFirstGesture: () => this.sfx.unlock(),
+      onFirstGesture: () => this.unlockAudio(),
     });
     this.store = new SandboxStore((p) => this.askConfirm(p), localKV);
     const resize = () => this.world.resize(canvas.clientWidth || innerWidth, canvas.clientHeight || innerHeight);
@@ -118,13 +121,19 @@ export class Session {
     document.addEventListener('visibilitychange', this.onVisibility);
     addEventListener('pagehide', () => this.save());
     addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.back()) e.preventDefault(); });
-    addEventListener('pointerdown', () => this.sfx.unlock(), { capture: true });
+    addEventListener('pointerdown', () => this.unlockAudio(), { capture: true });
     this.raf = requestAnimationFrame(this.frame);
+  }
+
+  private unlockAudio(): void {
+    this.sfx.unlock();
+    this.music.attach(this.sfx.context, this.sfx.output);
   }
 
   // ── Screens ────────────────────────────────────────────────────────────────
   previewRegion(id: RegionId): void {
     this.preview.value = id;
+    this.music.setRegion(id);
     this.world.setRegion(id, null, 'showcase');
   }
 
@@ -150,6 +159,7 @@ export class Session {
 
   private enterRegion(): void {
     const s = this.state!;
+    this.music.setRegion(s.currentRegion);
     this.world.setRegion(s.currentRegion, s.regions[s.currentRegion].lots, 'play');
     this.lastVehicle = '';
     this.lastPaint = undefined;
@@ -411,6 +421,7 @@ export class Session {
   /** The app went to the background (tab hidden, Android pause): remember when, and save. */
   suspend(): void {
     if (!this.hiddenAt) this.hiddenAt = Date.now();
+    this.music.setEnabled(false);
     this.save();
   }
 
@@ -419,6 +430,7 @@ export class Session {
   resume(): void {
     const at = this.hiddenAt;
     this.hiddenAt = 0;
+    this.music.setEnabled(this.settings.value.sound);
     if (!at || !this.state) return;
     this.applyAway((Date.now() - at) / 1000);
     this.last = performance.now();
@@ -450,12 +462,14 @@ export class Session {
     this.settings.value = next;
     localKV.set(SETTINGS_KEY, JSON.stringify(next));
     this.sfx.enabled = next.sound;
+    this.music.setEnabled(next.sound);
     setReducedMotion(next.reducedMotion);
     if (patch.quality) { this.save(); location.reload(); }
   }
 
   dispose(): void {
     cancelAnimationFrame(this.raf);
+    this.music.dispose();
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.controls.dispose();
     this.world.dispose();
