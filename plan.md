@@ -63,7 +63,22 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
 - [x] T7 3D world renderer, six region looks, perf budget, screenshots (F13)
 - [x] T8 Input + UI + audio + main loop wiring (F14, F15)
 - [x] T9 Hosted single-file build, PWA manifest, Capacitor config (F16) — playtest: https://bridgeton-grants.viktor.page/borderline-rich (workspace sign-in)
-- [ ] T10 Max-tier read-only critic → `evaluation.json` → fix NEEDS_WORK findings
+- [x] T10 Max-tier read-only critic → `evaluation.json` (verdict **NEEDS_WORK**, 14 findings, 2026-10-03)
+- T10 fix list — critic findings in player-impact order (finding # in `evaluation.json` in brackets):
+  - [ ] T10a Joystick moved the whole HUD (Preact adopted the joystick div as its root) + e2e that
+        asserts the HUD/joystick on screen + CI e2e robustness (camera settle, no random modals) [1, 13] (F14, F1)
+  - [ ] T10b Notifications: churn/rival toasts throttled into News, nothing over modals/lot card,
+        rank-up banner placement, no duplicate toasts [7] (F15)
+  - [ ] T10c Regions play differently in the first 20 min: region starter businesses + signature
+        mechanics that touch tier-1, Solenne Free Port works for residents, region cards generated from
+        the real numbers, difficulty stars match measured outcomes [2, 3, 11] (F3, F17)
+  - [ ] T10d Lot-card "≈ $/s" uses the real income function (tax, upkeep, competition, laws) [4] (F5)
+  - [ ] T10e Incremental city rebuild (per-chunk), no full-city rebuild on a lot change [5] (F13)
+  - [ ] T10f Visual pass: per-region landmark at spawn, camera framing, palm fronds, nights,
+        Neon Vale windows, Verano sand; squash-and-stretch on upgrade + visible per-level growth [6, 12] (F13)
+  - [ ] T10g Systems: wage deal has a real cost, every faction's standing does something,
+        buying out the rival ends a price war, early event variety [8, 9, 10, 14] (F7, F8, F9)
+  - [ ] T10h Evidence: F16 wording, re-run the critic until PASS
 
 ## 5. How to verify (definition of done)
 
