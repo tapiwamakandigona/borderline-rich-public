@@ -110,3 +110,11 @@
 - difficulty.test now runs 8 seeds (21, 7, 99, 3, 5, 11, 42, 77) instead of 3. With T12a the 3-seed run failed Ironhold vs Neon Vale (geometric-mean ratio 1.16x, needs > 1.25x); over 8 seeds the same pair is 1.75x. Seeds 7 and 99 happen to be Neon Vale's two best of the eight: the sim is chaotic and 3 samples were noise. Threshold unchanged. Cost: the file takes ~270 s locally instead of ~100 s.
 - VERIFIED locally: `npm run ci` 13 files / 103 tests green and build OK on the code as committed (the later edits are this log, plan.md, features.json and one test comment; tsc and check_budget re-run after them: clean, 20,752 bytes). Balance (seed 21, 45 min): Solenne $10.3M (2/4 rivals passed), Red Mesa $8.05M (1/3), Neon Vale $4.51M (0/4), Amberfield $29.2M (2/2), Verano $15.0M (2/3), Ironhold $2.66M (0/3).
 - ASSUMED acceptable: saves made before this commit keep their old-seeded rivals (no save migration; playtest saves are hours old). A new game gets the new rivals.
+
+## 2026-10-03 19:05 UTC — T12c: text tells the truth (critic #2 findings 9, 10, 11)
+- "You opened a Egg Stand" → `article()` in core/format.ts; the buy toast now reads "You opened an Egg Stand."
+- Transship is only offered between two non-Solenne regions: `methodsFor(from, to)` in core/trade.ts feeds the Trade sheet; a picked method that becomes illegal falls back to a legal one. `quote()` keeps its guard for callers that bypass the sheet.
+- Solenne Politics panel now explains the Free Port: certificate multiplier, +port bonus per ship up to the cap (current multiplier shown), the live import tariff, and that transship is for traders in other regions.
+- rm_nephew "Refuse" no longer promises "Your next permit may take a while" (one refusal, −15 from neutral, never reaches ENEMY_STANDING −25, so permits were unchanged). New text warns that a second clash slows permits, which is what `permitWait` does (×1.5 at enemy standing).
+- New tests/text-truth.test.ts (3 tests). VERIFIED revert check: they fail with the changes stashed, pass with them. No existing test edited.
+- VERIFIED locally: `npm run ci` 14 files / 106 tests green, build OK, check_budget 20,752 bytes (limit 32,000).

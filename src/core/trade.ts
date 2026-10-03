@@ -18,6 +18,11 @@ export const METHODS: { id: ShipMethod; name: string; blurb: string }[] = [
   { id: 'smuggle', name: 'Smuggle', blurb: 'No tariffs at all. Get caught and lose the cargo, pay a fine and gain a lot of heat.' },
 ];
 
+/** Paperwork options that make sense on this route: transshipping *through* Solenne is
+ *  meaningless when Solenne is the origin or the destination, so it isn't offered there. */
+export const methodsFor = (from: RegionId, to: RegionId) =>
+  METHODS.filter((m) => m.id !== 'transship' || (from !== 'solenne' && to !== 'solenne'));
+
 export interface Quote {
   ok: boolean; msg?: string;
   value: number; exportTariff: number; importTariff: number; fee: number; bribe: number;

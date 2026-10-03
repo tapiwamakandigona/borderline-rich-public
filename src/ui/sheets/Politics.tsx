@@ -10,7 +10,7 @@ import {
   bonusCost, buyInsurance, expeditePermit, insuranceCost, payUnionBonus, raiseVC, signWageDeal, toggleOffshore, vcAmount, wageDealCost,
 } from '../../core/actions';
 import {
-  coopActive, ownsBiz, permitWait, strikeActive, COOP_BONUS, favour, FRIEND_STANDING, ENEMY_STANDING, FRIEND_TAX, ENEMY_TAX, FRIEND_CUSTOMS, ENEMY_CUSTOMS,
+  coopActive, ownsBiz, portMult, FREE_PORT_CERT, PORT_BONUS, PORT_MAX_SHIPS, permitWait, strikeActive, COOP_BONUS, favour, FRIEND_STANDING, ENEMY_STANDING, FRIEND_TAX, ENEMY_TAX, FRIEND_CUSTOMS, ENEMY_CUSTOMS,
 } from '../../core/mechanics';
 import { money, pct, duration } from '../../core/format';
 import type { GameState } from '../../core/types';
@@ -80,7 +80,13 @@ function Signature({ st }: { st: GameState }) {
       body = <p>{coopActive(st) ? <>Co-op bonus <b class="mint">×{COOP_BONUS}</b> on your farms is active.</> : 'Own three or more farms here to join the growers\' co-op (+15 % farm income).'} Harvest pays ×1.6, winter ×0.5 — upgrade before the harvest.</p>;
       break;
     default:
-      body = <p class="muted">Imports land tariff-free. Transship other regions' cargo through Solenne to pay 40 % of their import tariff — customs may call it origin fraud.</p>;
+      body = (
+        <p class="muted">
+          Legal cargo you ship out of Solenne carries a free-port certificate: the destination charges <b>×{FREE_PORT_CERT}</b> of its import tariff.
+          {' '}Your Solenne logistics businesses earn <b class="mint">+{Math.round(PORT_BONUS * 100)} %</b> per ship of yours moving through the port (up to {PORT_MAX_SHIPS}; now ×{portMult(st).toFixed(1)}).
+          {' '}Imports into Solenne pay {pct(laws(st, 'solenne').importTariff)} tariff. Traders elsewhere can transship through Solenne for 40 % of the import tariff — customs may call it origin fraud.
+        </p>
+      );
   }
   return (
     <div class="card sig">

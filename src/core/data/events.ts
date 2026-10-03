@@ -137,7 +137,7 @@ export const EVENTS: EventDef[] = [
   // ── Red Mesa ──────────────────────────────────────────────────────────────
   { id: 'rm_nephew', region: 'redmesa', title: 'The Governor\'s Nephew', body: 'Young Crane would like a "consulting fee" to keep your permits moving.', choices: [
     { label: 'Pay the fee', outcome: { text: 'Doors open. Paper trails form.', cash: -0.5, heat: 5, standing: [['circle', 15]] } },
-    { label: 'Refuse', outcome: { text: 'Your next permit may take a while.', standing: [['circle', -15]] } },
+    { label: 'Refuse', outcome: { text: 'Crane takes it personally. Cross the Circle again and your permits will crawl.', standing: [['circle', -15]] } },
   ] },
   { id: 'rm_bandits', region: 'redmesa', title: 'Bandits on Route 9', body: 'Masked riders hit a convoy last night. Your cargo is on the same road.', cond: (s) => s.shipments.length > 0, choices: [
     { label: 'Hire armed escorts', outcome: { text: 'Your trucks roll through untouched.', cash: -0.6 } },

@@ -13,6 +13,8 @@ export function money(n: number, opts: { sign?: boolean } = {}): string {
   } else s = a >= 100 || Number.isInteger(a) ? Math.floor(a).toString() : a.toFixed(1);
   return (neg ? '−' : opts.sign ? '+' : '') + '$' + s;
 }
+/** English indefinite article for a noun phrase: 'an Egg Stand', 'a Fuel Pump'. */
+export const article = (noun: string) => (/^[aeiou]/i.test(noun.trim()) ? 'an' : 'a');
 export const perSec = (n: number) => `${money(n)}/s`;
 export const pct = (x: number, digits = 0) => `${(x * 100).toFixed(digits)}%`;
 export function duration(sec: number): string {

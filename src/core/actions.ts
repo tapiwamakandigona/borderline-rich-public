@@ -14,7 +14,7 @@ import { costIndex, laws } from './laws';
 import { ownsBiz, permitWait, WAGE_DEAL_MAX, WAGE_DEAL_STEP } from './mechanics';
 import { chance } from './rng';
 import { notify } from './notify';
-import { money } from './format';
+import { article, money } from './format';
 import { MAX_LEVEL } from './constants';
 
 export { buyRivalLot, acquireRival } from './rivals';
@@ -72,7 +72,7 @@ export function buyVacant(s: GameState, regionId: RegionId, lotId: string, bizId
   ls.permitUntil = wait > 0 ? s.t + wait : 0;
   s.stats.bizBought++;
   s.rev++;
-  notify(s, `You opened a ${b.name}${ls.permitUntil ? ' — awaiting its permit' : ''}.`, 'good');
+  notify(s, `You opened ${article(b.name)} ${b.name}${ls.permitUntil ? ' — awaiting its permit' : ''}.`, 'good');
   return ok;
 }
 

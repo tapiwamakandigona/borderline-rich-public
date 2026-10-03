@@ -6,7 +6,7 @@ import { Icon } from '../icons';
 import { GOODS, GOOD } from '../../core/data/businesses';
 import { REGION, REGION_IDS } from '../../core/data/regions';
 import { CARGO_CAP } from '../../core/data/progression';
-import { METHODS, bestRoute, quote, ship } from '../../core/trade';
+import { METHODS, bestRoute, methodsFor, quote, ship } from '../../core/trade';
 import { laws } from '../../core/laws';
 import { money, pct, duration } from '../../core/format';
 import type { GoodId, RegionId, ShipMethod } from '../../core/types';
@@ -21,7 +21,10 @@ export function TradeSheet() {
   const [to, setTo] = useState<RegionId>(best?.to ?? REGION_IDS.find((r) => r !== from)!);
   const cap = CARGO_CAP[st.cargoLevel];
   const [qty, setQty] = useState(Math.min(cap, 10));
-  const [method, setMethod] = useState<ShipMethod>('legal');
+  const [picked, setMethod] = useState<ShipMethod>('legal');
+  const methods = methodsFor(from, to);
+  // A method that doesn't apply to this route (transship from/to Solenne) falls back to legal.
+  const method: ShipMethod = methods.some((m) => m.id === picked) ? picked : 'legal';
   const [bribe, setBribe] = useState(false);
   const q = quote(st, good, Math.min(qty, cap), to, method, bribe);
   const profit = q.expectedRevenue - q.upfront;
@@ -58,7 +61,7 @@ export function TradeSheet() {
           <input class="slider" type="range" min={1} max={cap} value={Math.min(qty, cap)} onInput={(e) => setQty(Number((e.target as HTMLInputElement).value))} />
           <h4 class="sub-h">Paperwork</h4>
           <div class="methods">
-            {METHODS.map((m) => (
+            {methods.map((m) => (
               <button key={m.id} data-testid={`method-${m.id}`} class={`method${m.id === method ? ' on' : ''}${m.id === 'smuggle' || m.id === 'undervalue' ? ' shady' : ''}`} onClick={() => setMethod(m.id)}>
                 <b>{m.name}</b><span>{m.blurb}</span>
               </button>
