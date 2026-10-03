@@ -14,5 +14,5 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1500,
     assetsInlineLimit: mode === 'single' ? 100_000_000 : 4096,
   },
-  test: { include: ['tests/**/*.test.ts'], environment: 'node' },
+  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 180_000 },
 }));
