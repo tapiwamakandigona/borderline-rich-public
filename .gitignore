@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-single/
+dist-test/
+coverage/
+test-results/
+playwright-report/
+e2e/__shots__/
+.eval/
+*.log
+.DS_Store
+.env
+.env.*
+.secrets/
