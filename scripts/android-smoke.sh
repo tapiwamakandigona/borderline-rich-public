@@ -11,14 +11,17 @@ UI="python3 scripts/android_ui.py"
 mkdir -p "$OUT"
 
 finish() { adb logcat -d > "$OUT/logcat.txt" 2>/dev/null || true; }
-fail() { echo "SMOKE FAIL: $*"; shot "fail"; finish; exit 1; }
+fail() { echo "SMOKE FAIL: $*"; tail -n 4 "$OUT/uiautomator.log" 2>/dev/null; shot "fail"; finish; exit 1; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png" 2>/dev/null || true; }
-# dump NAME: accessibility tree → $OUT/NAME.xml; non-zero when uiautomator produced none. While the 3D
-# scene animates, uiautomator often gives up ("could not get idle state") without writing a file, so
-# delete the previous dump first; otherwise the stale one is read back as if it were current.
+# dump NAME: accessibility tree → $OUT/NAME.xml; non-zero when uiautomator produced none. uiautomator
+# answers only after the page has been still for 1 s; otherwise it gives up ("could not get idle
+# state") without writing a file. So delete the previous dump first, or the stale one is read back as
+# if it were current. Its messages go to $OUT/uiautomator.log (the app keeps an idle HUD still for
+# this: e2e/a11y.spec.ts).
 dump() {
   adb shell rm -f /sdcard/ui.xml > /dev/null 2>&1
-  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1
+  echo "--- $1 $(date -u +%T)" >> "$OUT/uiautomator.log"
+  adb shell uiautomator dump /sdcard/ui.xml >> "$OUT/uiautomator.log" 2>&1
   adb shell cat /sdcard/ui.xml > "$OUT/$1.xml" 2>/dev/null
   grep -q '<hierarchy' "$OUT/$1.xml"
 }

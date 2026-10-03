@@ -13,9 +13,13 @@ import { JUICE } from './juice';
 import type { GameState } from '../core/types';
 import type { SheetId } from '../app/session';
 
+/** The HUD clock moves in 15-minute steps (every 2.5 s). A game minute passes every 1/6 s, so a
+ *  minute clock rewrote the HUD six times a second, and Android's accessibility tree (TalkBack,
+ *  uiautomator) never saw the 1 s of stillness it waits for (e2e/a11y.spec.ts). */
+const CLOCK_STEP_MINS = 15;
 function clock(t: number): string {
   const tod = (t / DAY + 0.08) % 1;
-  const mins = Math.floor((6 * 60 + tod * 24 * 60) % (24 * 60));
+  const mins = Math.floor(((6 * 60 + tod * 24 * 60) % (24 * 60)) / CLOCK_STEP_MINS) * CLOCK_STEP_MINS;
   return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
 }
 
@@ -114,8 +118,8 @@ export function Hud() {
           <span class="rank-next">{nextRank ? `${money(nw)} / ${money(nextRank.min)}` : money(nw)}</span>
         </button>
         <div class="meters">
-          <span class={`meter heat${st.heat >= 60 ? ' hot' : ''}`} title="Heat"><Icon name="heat" size={14} />{Math.round(st.heat)}</span>
-          <span class="meter rep" title="Reputation"><Icon name="rep" size={14} />{Math.round(st.rep)}</span>
+          <span class={`meter heat${st.heat >= 60 ? ' hot' : ''}`} title="Heat"><Icon name="heat" size={14} />{String(Math.round(st.heat))}</span>
+          <span class="meter rep" title="Reputation"><Icon name="rep" size={14} />{String(Math.round(st.rep))}</span>
           <span class="meter clock" title="Time"><Icon name="clock" size={14} />D{Math.floor(st.t / DAY) + 1} {clock(st.t)}</span>
         </div>
       </div>

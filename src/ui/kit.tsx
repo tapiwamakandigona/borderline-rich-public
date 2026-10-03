@@ -29,7 +29,9 @@ export function CountUp({ value, format = money, class: cls }: { value: number; 
       const t = target.current, cur = shown.current;
       const gap = t - cur;
       shown.current = Math.abs(gap) < Math.max(0.01, Math.abs(t) * 1e-4) ? t : cur + gap * (1 - Math.exp(-JUICE.countUpRate * dt));
-      if (el.current) el.current.textContent = format(shown.current);
+      // Write only real changes: an unchanged label must not churn the DOM (and the accessibility tree) every frame.
+      const text = format(shown.current);
+      if (el.current && el.current.textContent !== text) el.current.textContent = text;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
