@@ -256,6 +256,7 @@ export class World {
 
   /** Full build (region change). Normal play only rebuilds the chunks whose lots changed. */
   private rebuildCity(lots: Record<string, LotState> | null): void {
+    this.clearLotCache(); // a full build starts from scratch (region entry), never from a warm cache
     this.visuals = new Map();
     for (const c of this.chunks) this.buildChunk(c, lots);
     this.updateSmoke();

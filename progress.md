@@ -136,3 +136,7 @@
   app id 4975048660131277373, game, free).
 - Gate: `npm run ci` green — 15 files / 113 tests, boot set 20,752 bytes. e2e runs in public CI. ASSUMED: device fps
   gains (no phone here); SwiftShader timings are not device timings.
+- Follow-up (same task): public CI e2e failed 4/6 regions on `probe.ms < fullMs * 0.6` because the probe's "full city"
+  rebuild hit the warm per-lot cache (≈13 ms). `rebuildCity` (only used on region entry) now starts from a cold cache,
+  which is what a real full build costs. Test untouched. Local e2e: solenne 1 lot 14.0 ms vs full 204.4 ms, neonvale
+  10.9 vs 264.3, verano 9.3 vs 169.9 — all pass. `npm run ci` green (113 tests).
