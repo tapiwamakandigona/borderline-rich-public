@@ -239,7 +239,7 @@ export class World {
     this.sun.target.position.copy(focus);
     const m = this.mats!;
     (m.upper as THREE.MeshStandardMaterial).emissiveIntensity = 0.03 + night * 1.25 + dusk * 0.25;
-    (m.glass as THREE.MeshStandardMaterial).emissiveIntensity = 0.02 + night * (theme.neon ? 1.5 : 1.1) + dusk * 0.3;
+    (m.glass as THREE.MeshStandardMaterial).emissiveIntensity = 0.02 + night * 0.9 + dusk * 0.25;
     (m.ground as THREE.MeshStandardMaterial).emissiveIntensity = 0.12 + night * 1.3 + dusk * 0.3;
     (m.glow as THREE.MeshBasicMaterial).color.setScalar(0.85 + night * 0.9);
     for (const w of s.waterMats) {

@@ -1,33 +1,34 @@
-// Temporary world-preview entry (replaced by the full app in T8).
-import * as THREE from 'three';
-import { World } from './world/World';
-import { newGame } from './core/state';
-import { REGION } from './core/data/regions';
-import type { RegionId } from './core/types';
+// Entry: 3D canvas underneath, Preact UI overlay on top, one Session gluing them together.
+import { render } from 'preact';
+import { Session } from './app/session';
+import { setSession } from './ui/kit';
+import { App } from './ui/App';
+import './ui/styles.css';
+import textFont from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
+import display600 from '@fontsource/unbounded/files/unbounded-latin-600-normal.woff2?url';
+import display800 from '@fontsource/unbounded/files/unbounded-latin-800-normal.woff2?url';
 
-const q = new URLSearchParams(location.search);
-const region = (q.get('region') ?? 'solenne') as RegionId;
-const mode = (q.get('mode') ?? 'showcase') as 'play' | 'showcase';
-const simT = Number(q.get('t') ?? 40);
-document.body.style.margin = '0';
-const canvas = document.createElement('canvas');
-canvas.style.cssText = 'display:block;width:100vw;height:100vh';
-document.getElementById('app')!.appendChild(canvas);
-const world = new World(canvas, (q.get('q') as 'low' | 'medium' | 'high') ?? 'high');
-const state = newGame(region, 7);
-world.setRegion(region, state.regions[region].lots, mode);
-const colors: Record<string, number> = {};
-for (const r of REGION[region].rivals) colors[r.id] = parseInt(r.color.slice(1), 16);
-world.syncLots(state.regions[region].lots, (o) => (o === 'player' ? 0xf2c14e : colors[o] ?? null), new Set(), new Set());
-if (q.get('zoom')) world.rig.dist = Number(q.get('zoom'));
-if (q.get('az')) world.rig.azimuth = Number(q.get('az'));
-const resize = () => world.resize(innerWidth, innerHeight);
-addEventListener('resize', resize); resize();
-let last = performance.now();
-(window as unknown as { __world: World }).__world = world;
-function loop(now: number) {
-  const dt = (now - last) / 1000; last = now;
-  world.frame(dt, simT + now / 1000 * 0, new THREE.Vector2());
-  requestAnimationFrame(loop);
+function loadFonts(): void {
+  const faces = [
+    new FontFace('Bricolage', `url(${textFont})`, { weight: '200 800' }),
+    new FontFace('Unbounded', `url(${display600})`, { weight: '600' }),
+    new FontFace('Unbounded', `url(${display800})`, { weight: '800' }),
+  ];
+  for (const f of faces) { document.fonts.add(f); f.load().catch(() => undefined); }
 }
-requestAnimationFrame(loop);
+
+loadFonts();
+const root = document.getElementById('app')!;
+const canvas = document.createElement('canvas');
+canvas.className = 'world';
+const layer = document.createElement('div');
+layer.className = 'layer';
+root.append(canvas, layer);
+
+const session = new Session(canvas, layer);
+setSession(session);
+render(<App />, layer);
+
+if (__SIM_HOOK__) {
+  void import('./app/testHook').then((m) => m.installTestHook(session));
+}

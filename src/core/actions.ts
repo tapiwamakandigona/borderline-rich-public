@@ -187,6 +187,16 @@ export function buyPaint(s: GameState, id: string): ActionResult {
   s.gold -= p.gold; s.paint = id; s.rev++;
   return ok;
 }
+/** Switch paint: the Gilded paint comes with the Starter Pack, the others cost gold each time. */
+export function applyPaint(s: GameState, id: string): ActionResult {
+  const p = PAINTS.find((x) => x.id === id);
+  if (!p) return fail('Not available.');
+  if (s.paint === id) return fail('Already painted that colour.');
+  if (!p.starterOnly) return buyPaint(s, id);
+  if (!s.entitlements.starterPack) return fail('Gilded paint comes with the Starter Pack.');
+  s.paint = id; s.rev++;
+  return ok;
+}
 export function upgradeCargo(s: GameState): ActionResult {
   const c = CARGO_UPGRADE[s.cargoLevel];
   if (c === undefined) return fail('Fleet is maxed.');

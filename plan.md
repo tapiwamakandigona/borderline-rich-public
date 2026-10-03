@@ -60,8 +60,8 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
 - [x] T4 Rivals + Rich List + events + goals + vehicles + expansion (F8, F9, F10)
 - [x] T5 IAP layer + offline earnings (F11, F12)
 - [x] T6 Balance bot tests + tuning (F4, F17)
-- [ ] T7 3D world renderer, six region looks, perf budget, screenshots (F13)
-- [ ] T8 Input + UI + audio + main loop wiring (F14, F15)
+- [x] T7 3D world renderer, six region looks, perf budget, screenshots (F13)
+- [x] T8 Input + UI + audio + main loop wiring (F14, F15)
 - [ ] T9 Hosted single-file build, PWA manifest, Capacitor config (F16)
 - [ ] T10 Max-tier read-only critic → `evaluation.json` → fix NEEDS_WORK findings
 

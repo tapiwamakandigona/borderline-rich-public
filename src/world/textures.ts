@@ -73,7 +73,14 @@ export function facade(style: WindowStyle, seed: number, glow: number): Facade {
       g.fillStyle = grd; g.fillRect(x, y, w, h);
       g.fillStyle = 'rgba(255,255,255,0.18)';
       g.beginPath(); g.moveTo(x + w * 0.15, y + h); g.lineTo(x + w * 0.45, y); g.lineTo(x + w * 0.6, y); g.lineTo(x + w * 0.3, y + h); g.fill();
-      if (on) { ge.fillStyle = lit; ge.globalAlpha = 0.65 + next(r) * 0.35; ge.fillRect(x, y, w, h); ge.globalAlpha = 1; }
+      if (on && (style !== 'curtain' || next(r) < 0.7)) {
+        ge.fillStyle = lit;
+        ge.globalAlpha = style === 'curtain' ? 0.4 + next(r) * 0.4 : 0.65 + next(r) * 0.35;
+        ge.fillRect(x, y, w, h);
+        ge.globalAlpha = 1;
+        // Office blinds break big curtain-wall panes into readable lit floors instead of white slabs.
+        if (style === 'curtain') { ge.fillStyle = 'rgba(0,0,0,0.6)'; for (let yy = y + 3; yy < y + h; yy += 6) ge.fillRect(x, yy, w, 2); }
+      }
     };
     switch (style) {
       case 'shutter':

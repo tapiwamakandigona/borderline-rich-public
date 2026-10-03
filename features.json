@@ -22,8 +22,8 @@
       "title": "Six genuinely different starting regions",
       "acceptance": "6 regions, each with a distinct government type, signature mechanic that measurably changes outcomes, laws/tariffs, >=2 factions, >=2 named rivals, 5 districts, >=6 region-only events and a distinct visual theme; pairwise-distinct economy profiles",
       "verify": "npx vitest run tests/regions.test.ts",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "2026-10-03: npx vitest run tests/regions.test.ts -> 11 passed, incl. new theme test (unique roofStyle/windowStyle/outskirts per region; pairwise palette distance > 40)."
     },
     {
       "id": "F4",
@@ -102,24 +102,24 @@
       "title": "3D open world per region",
       "acceptance": "Each region renders a procedurally built city with its own palette/architecture/props, day-night, water or terrain features, traffic and weather; headless budget <= 220 draw calls and <= 500k triangles; a screenshot per region is captured and reviewed",
       "verify": "npm run build:test && npx playwright test e2e/world.spec.ts",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "2026-10-03: npm run build:test && npx playwright test e2e/world.spec.ts -> 7 passed (select flyover + 6 regions day/wide/night). Budget asserted <=220 calls, <=500k tris (observed 34-39 calls, 104k-287k tris at high). 19 screenshots in e2e/__shots__ reviewed by eye; fixed vacant-lot sparseness, Solenne coast framing, Neon Vale far shore and night glare after review."
     },
     {
       "id": "F14",
       "title": "Mobile controls",
       "acceptance": "Touch joystick moves the player; drag orbits; pinch zooms; tapping a building opens its card",
       "verify": "npm run build:test && npx playwright test e2e/controls.spec.ts",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "2026-10-03: npx playwright test e2e/controls.spec.ts -> 1 passed. CDP Input.dispatchTouchEvent: joystick moved player >3 m, right-half drag changed azimuth >0.2 rad, two-finger pinch cut camera distance >15 %, tap on a building opened the lot card."
     },
     {
       "id": "F15",
       "title": "Game UI and loop",
       "acceptance": "Region select -> game; HUD; Empire/Trade/Politics/Rivals/Store sheets; event modal; buy flow from the world; no console errors in a scripted session",
       "verify": "npm run build:test && npx playwright test e2e/ui.spec.ts",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "2026-10-03: npx playwright test e2e/ui.spec.ts -> 1 passed. Region select -> game, 12 hustles + goal, walk-up buy of a cart, upgrade, collect, all 5 sheets (ship cargo, donate, sandbox gold purchase +120), event modal resolve, reload keeps the save; zero page/console errors."
     },
     {
       "id": "F16",

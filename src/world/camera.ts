@@ -35,7 +35,7 @@ export class CameraRig {
     this.mode = 'follow';
     this.target.copy(at);
     this.lookAt.copy(at);
-    this.dist = 42; this.polar = 0.95;
+    this.dist = 64; this.polar = 0.92;
   }
   /** Smoothly move the follow target to a point of interest (e.g. an event's building). */
   peek(at: THREE.Vector3): void { this.lookAt.lerp(at, 0.5); }
