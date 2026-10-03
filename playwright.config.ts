@@ -4,7 +4,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 120_000,
+  // Per-test budget. GitHub's shared runners render SwiftShader ~3x slower than a dev box (run 37110751257:
+  // 14.2 min vs 4.3 min locally), so CI gets more wall-clock. No assertion or render budget changes with it.
+  timeout: process.env.CI ? 300_000 : 120_000,
   expect: { timeout: 15_000 },
   workers: 1,
   fullyParallel: false,
