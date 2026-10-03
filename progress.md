@@ -140,3 +140,4 @@
   rebuild hit the warm per-lot cache (≈13 ms). `rebuildCity` (only used on region entry) now starts from a cold cache,
   which is what a real full build costs. Test untouched. Local e2e: solenne 1 lot 14.0 ms vs full 204.4 ms, neonvale
   10.9 vs 264.3, verano 9.3 vs 169.9 — all pass. `npm run ci` green (113 tests).
+- 2026-10-03 Play compliance: Settings sheet links the privacy policy (tapiwamakandigona.github.io/emberdelve/store/borderline-rich-privacy.html). npm run ci green (113 tests).

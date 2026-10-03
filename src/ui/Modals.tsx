@@ -7,6 +7,9 @@ import { money, duration } from '../core/format';
 import { JUICE } from './juice';
 import type { QualityName } from '../world/quality';
 
+/** Google Play requires the privacy policy to be reachable from inside the app too. Opens in the system browser on Android. */
+export const PRIVACY_URL = 'https://tapiwamakandigona.github.io/emberdelve/store/borderline-rich-privacy.html';
+
 export function EventModal() {
   const s = useSession();
   const st = s.state;
@@ -112,7 +115,7 @@ export function SettingsSheet() {
         <Btn kind="ghost" small onClick={() => { s.save(); s.toast('Saved.', 'good'); }}>Save now</Btn>
         <Btn kind="danger" small onClick={() => { if (confirm('Start over? Your current empire will be deleted.')) s.newGame(); }}>New game</Btn>
       </div>
-      <p class="muted small">Borderline Rich · v0.1 vertical slice</p>
+      <p class="muted small">Borderline Rich · v0.1 vertical slice · <a class="link" href={PRIVACY_URL} target="_blank" rel="noopener">Privacy policy</a> (no data collected)</p>
     </Sheet>
   );
 }
