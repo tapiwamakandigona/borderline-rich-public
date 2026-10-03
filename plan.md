@@ -74,16 +74,20 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         the real numbers, difficulty stars match measured outcomes [2, 3, 11] (F3, F17)
   - [x] T10d Lot-card "≈ $/s" uses the real income function (tax, upkeep, competition, laws) [4] (F5)
   - [x] T10e Incremental city rebuild (per-chunk), no full-city rebuild on a lot change [5] (F13)
-  - [ ] T10f Visual pass: per-region landmark at spawn, camera framing, palm fronds, nights,
+  - [x] T10f Visual pass: per-region landmark at spawn, camera framing, palm fronds, nights,
         Neon Vale windows, Verano sand; squash-and-stretch on upgrade + visible per-level growth [6, 12] (F13)
-  - [ ] T10g Systems: wage deal has a real cost, every faction's standing does something,
+  - [x] T10g Systems: wage deal has a real cost, every faction's standing does something,
         buying out the rival ends a price war, early event variety [8, 9, 10, 14] (F7, F8, F9)
+  - [x] T10g+ Neon Vale vendor medallion: carts ×2.5 to open there, so the local tech hustle is the
+        cheapest opener (12-seed tech share 46–79 %, was min 11 %) (F3, F17)
+  - [x] T10i Region select works on small phones (375×667, 360×640, 360×740): scrollable cards,
+        sticky Start, one-line title + e2e with real touch drags (F14)
   - [ ] T10h Evidence: F16 wording, re-run the critic until PASS
 
 ## 5. How to verify (definition of done)
 
 - `npm run ci` → typecheck + unit/balance tests + production build + boot-budget check.
-- `npm run build:test && npx playwright test` → e2e on a 390×844 touch viewport, writes
+- `npm run build:test && npx playwright test` → e2e on a 390×844 touch viewport (+ a 360×640 small-phone check), writes
   screenshots to `e2e/__shots__/` (gitignored) — look at them; "it loads" is not done.
 - Completion = checks green + every `features.json` entry `"passes": true` with evidence
   + the read-only evaluator agrees (`evaluation.json` verdict PASS).
