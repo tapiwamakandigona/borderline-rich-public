@@ -90,9 +90,12 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
       device-smoke (emulator: install, Start, hustle, screenshots) → rolling `playtest` release.
       First fully green run: 37122408326 (a715fd3), Playtest build #5 (2026-10-03 12:27 UTC)
 - T12 fix list — critic evaluation #2, player-impact order (finding # in `evaluation.json` in brackets):
-  - [ ] T12a Rivals play fair: no price war on a brand-new player (same 600 s gate as offers/sabotage),
+  - [x] T12a Rivals play fair: no price war on a brand-new player (same 600 s gate as offers/sabotage),
         an affordable remedy; rivals seeded at their designed size (startCash, capped levels; the
         "mega-rival" really is the biggest); rivals can't spend money they don't have [new 1, 2, 3] (F8, F17)
+        Done 2026-10-03: `RivalDef.startWorth` (net worth at t = 0, 60 % in businesses ≤ level 25), rivals
+        bank 25 % of profit, wars only where the buy-out ≤ your net worth (toast names the price), stale
+        offers fall through; the balance bot passes a home rival in every 1–2★ region; difficulty.test 8 seeds
   - [ ] T12b Toasts never cover the lot-card header or the cash card (360×640) + e2e guard; the region
         starter is listed first on a vacant lot, tagged as the local pick [new 4, 5; prior 7] (F14, F15)
   - [ ] T12c Text tells the truth: Solenne Free Port panel + no transship option for Solenne residents;

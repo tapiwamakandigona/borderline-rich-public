@@ -5,7 +5,7 @@ import { REGION_IDS } from './data/regions';
 import { derived, tillCap } from './economy';
 import { mechanicsTick, offshoreActive } from './mechanics';
 import { marketTick, resolveShipment } from './trade';
-import { rivalAct } from './rivals';
+import { RIVAL_RETAIN, rivalAct } from './rivals';
 import { runElection } from './politics';
 import { progressCheck } from './sim';
 
@@ -32,7 +32,7 @@ export function applyOffline(state: GameState, awaySeconds: number): OfflineRepo
     }
   }
   state.stats.earned += earned;
-  for (const [id, inc] of Object.entries(d.rivals)) if (state.rivals[id] && !state.rivals[id].acquired) state.rivals[id].cash += inc * s;
+  for (const [id, inc] of Object.entries(d.rivals)) if (state.rivals[id] && !state.rivals[id].acquired) state.rivals[id].cash += inc * s * RIVAL_RETAIN;
 
   state.t += s;
   for (let i = state.shipments.length - 1; i >= 0; i--) {

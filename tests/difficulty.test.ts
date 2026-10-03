@@ -12,11 +12,14 @@ import { money } from '../src/core/format';
 import { runBot } from './helpers/bot';
 import type { RegionId } from '../src/core/types';
 
-const SEEDS = [21, 7, 99];
+// Eight seeds, not three: the sim is chaotic (early luck compounds ~10x), and a 3-seed geometric mean
+// flipped the Ironhold/Neon Vale verdict on noise after T12a (geometric-mean ratio with seeds 21/7/99:
+// 1.16x; with all 8: 1.75x; the test needs > 1.25x).
+const SEEDS = [21, 7, 99, 3, 5, 11, 42, 77];
 const pp = {} as Record<RegionId, number[]>;
 const share = {} as Record<RegionId, number[]>;
 
-describe('region identity and difficulty (30 simulated minutes x 3 seeds per region)', () => {
+describe('region identity and difficulty (30 simulated minutes x 8 seeds per region)', () => {
   for (const R of REGIONS) {
     it(`${R.name}: plays around its signature`, () => {
       pp[R.id] = []; share[R.id] = [];

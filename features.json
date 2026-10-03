@@ -63,7 +63,7 @@
       "acceptance": "Rivals earn, buy and upgrade lots over time, start price wars and offers; player can buy rival lots and acquire a whole rival; Rich List ranks player + all rivals",
       "verify": "npx vitest run tests/rivals.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/rivals.test.ts 8/8 — rivals grow in >=5/6 regions over 20 min and lobby; buy rival lot at ask; acquisition gates (1.5x NW, 1.3x cash) absorb all lots; price war = exactly x0.65 and (T10g) ends when you buy the rival out of that district + category; offers via events only after 600 s and only for lots >= $4k x cost index; Rich List of 20 sorted."
+      "evidence": "VERIFIED 2026-10-03 (T12a): tests/rivals.test.ts 12/12. F8: rivals grow in >=5/6 regions over 20 min and lobby; buy rival lot at ask; acquisition gates (1.5x NW, 1.3x cash) absorb all lots; price war = exactly x0.65 and (T10g) ends when you buy the rival out of that district + category; offers via events only after 600 s and only for lots >= $4k x cost index; Rich List of 20 sorted. T12a (critic #2 findings 1-3): every rival starts at its designed startWorth (net worth / startWorth = 1 to 6 decimals, startLots lots, levels <= 25, biggest on paper = biggest in game; 5 seeds); rival cash never < 0 (every rival x 4 budgets x 200 acts, plus 30 min of the real sim on 2 seeds); an offer the rival can no longer cover falls through ('The buyer backed out'); price wars wait 600 s and only start where the buy-out costs <= your net worth, and the toast names that price. Revert check: on the old behaviour these tests fail ('-94,447,309 >= 0', \"'azure' to be 'player'\", 'true to be false')."
     },
     {
       "id": "F9",
@@ -135,7 +135,7 @@
       "acceptance": "Bot playing the real sim for 45 simulated minutes reaches $50K-$50M net worth in every region, never produces NaN/negative cash, and the easy region outpaces the expert region",
       "verify": "npx vitest run tests/balance.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/balance.test.ts 8/8 — 45-min bot net worth (seed 21): solenne $4.79M, redmesa $6.19M, neonvale $3.25M, amberfield $20.0M, verano $15.8M, ironhold $2.32M; first business 11.9-16.2 s; no NaN, cash never negative. tests/difficulty.test.ts: stars order purchasing-power net worth pairwise over 3 seeds with a 25 % margin (pp@30m: Amberfield $4.70-17.4M, Verano $5.95-8.52M, Red Mesa $3.78-6.92M, Solenne $1.10-2.78M, Ironhold $794K-1.22M, Neon Vale $649-757K)."
+      "evidence": "VERIFIED 2026-10-03 (after T12a): tests/balance.test.ts 9/9 - 45-min bot net worth (seed 21): solenne $10.3M (passed 2/4 home rivals), redmesa $8.05M (1/3), neonvale $4.51M (0/4), amberfield $29.2M (2/2), verano $15.0M (2/3), ironhold $2.66M (0/3); first business 11.9-16.2 s; no NaN, cash never negative; new test: in every 1-2 star region the bot passes a home rival within 45 min. tests/difficulty.test.ts now 8 seeds (21,7,99,3,5,11,42,77; 3 seeds flipped Ironhold vs Neon Vale on noise): stars order purchasing-power net worth pairwise with a 25 % margin (geometric means pp@30m: Amberfield $17.3M, Verano $8.03M, Red Mesa $5.43M, Solenne $3.24M, Ironhold $1.19M, Neon Vale $683K; tightest pair Ironhold/Neon Vale 1.75x); signature share >= 25 % on every seed (lowest Verano 25 %)."
     },
     {
       "id": "F18",

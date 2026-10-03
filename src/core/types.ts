@@ -65,7 +65,8 @@ export interface RivalDef {
   color: string;
   personality: Personality;
   focus: Category[];
-  startCash: number;
+  /** Designed size: net worth at the start of a game (seeded businesses + cash). */
+  startWorth: number;
   startLots: number;
   greed: number;
   favFaction: string;

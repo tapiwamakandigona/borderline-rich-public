@@ -135,6 +135,8 @@ function applyOutcome(state: GameState, pe: PendingEvent, o: Outcome): void {
       const r = state.rivals[String(pe.vars.rivalId)];
       if (ls?.owner === 'player' && r) {
         const price = Number(pe.vars.price);
+        // The offer was made with money they had then; rivals never go into debt (critic evaluation #2, finding 3).
+        if (r.acquired || r.cash < price) { notify(state, 'The buyer backed out: they can no longer cover the price.', 'bad'); return; }
         state.cash += price + ls.till;
         r.cash -= price;
         Object.assign(ls, { owner: r.id, till: 0, manager: true, invested: 0 });

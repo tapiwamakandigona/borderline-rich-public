@@ -1,9 +1,9 @@
 // Rival companies: they earn, expand, upgrade, lobby, start price wars, make offers for your
 // businesses and (if shady) sabotage you. You can buy their lots or acquire them outright.
-import type { ActionResult, GameState, Personality, RegionId, RivalDef } from './types';
+import type { ActionResult, BusinessDef, GameState, Personality, RegionId, RivalDef } from './types';
 import { REGION, REGION_IDS } from './data/regions';
 import { BIZ } from './data/businesses';
-import { getCity } from './city';
+import { getCity, type LotDef } from './city';
 import {
   allowedBiz, bizCost, derived, landPrice, lotValue, netWorth, npcAsk, rivalAsk, rivalNetWorth, upgradeCost,
 } from './economy';
@@ -25,6 +25,10 @@ export const RIVAL_EVENTS_AFTER = 600;
 /** Rivals only bid for businesses worth at least this much (× the region's cost index). */
 export const OFFER_MIN_VALUE = 4000;
 export const PRICE_WAR_SECS = 120;
+/** Share of their profit rivals bank; the rest goes to their owners and head office. At 100 % every
+ *  rival compounded at the player's rate on top of a head start of millions, so the Rich List was a
+ *  race nobody could join (critic evaluation #2, finding 2). */
+export const RIVAL_RETAIN = 0.25;
 
 export const rivalDef = (id: string): RivalDef => {
   for (const R of REGION_IDS) {
@@ -34,16 +38,21 @@ export const rivalDef = (id: string): RivalDef => {
   throw new Error('unknown rival ' + id);
 };
 
-function claimLot(state: GameState, regionId: RegionId, lotId: string, rival: RivalDef, price: number): void {
+/** What a rival would open on an empty lot: its focus businesses, or anything allowed there. */
+function openOptions(regionId: RegionId, lot: LotDef, rival: RivalDef): BusinessDef[] {
+  const opts = allowedBiz(regionId, lot).filter((b) => rival.focus.includes(b.category));
+  return opts.length ? opts : allowedBiz(regionId, lot);
+}
+
+/** The rival pays `price` (land, or an NPC's asking price) plus, on an empty lot, the cost of opening
+ *  `bizId`. Callers check that the rival can pay: rivals never go into debt (critic evaluation #2, finding 3). */
+function claimLot(state: GameState, regionId: RegionId, lotId: string, rival: RivalDef, price: number, bizId: string | null = null): void {
   const ls = state.regions[regionId].lots[lotId];
   const r = state.rivals[rival.id];
   r.cash -= price;
-  if (!ls.biz) {
-    const def = getCity(regionId).lotById[lotId];
-    const opts = allowedBiz(regionId, def).filter((b) => rival.focus.includes(b.category));
-    const b = weighted(state, opts.length ? opts : allowedBiz(regionId, def), (x) => x.tier);
-    r.cash -= bizCost(state, regionId, b);
-    ls.biz = b.id;
+  if (!ls.biz && bizId) {
+    r.cash -= bizCost(state, regionId, BIZ[bizId]);
+    ls.biz = bizId;
     ls.level = 1;
   }
   ls.owner = rival.id;
@@ -69,13 +78,17 @@ export function rivalAct(state: GameState, rivalId: string): void {
     const vacant = city.lots.filter((d) => rs.lots[d.id].owner === 'vacant');
     const share = Object.values(rs.lots).filter((l) => l.owner === rivalId).length / city.lots.length;
     if (vacant.length > 3 && share < 0.22) {
-      const affordable = vacant.filter((d) => landPrice(state, regionId, d) * p.reserve * 3 < r.cash);
+      // Land plus the opening, paid out of what the rival can spare after its reserve.
+      const budget = r.cash / p.reserve;
+      const cost = (d: LotDef, b: BusinessDef) => landPrice(state, regionId, d) + bizCost(state, regionId, b);
+      const affordable = vacant.filter((d) => openOptions(regionId, d, def).some((b) => cost(d, b) <= budget));
       if (affordable.length) {
         const d = weighted(state, affordable, (x) => {
           const dist = REGION[regionId].districts.find((q) => q.id === x.district)!;
           return Math.max(...def.focus.map((c) => dist.fit[c] ?? 1)) * (x.footprint === 'small' ? 0.6 : 1);
         });
-        claimLot(state, regionId, d.id, def, landPrice(state, regionId, d));
+        const b = weighted(state, openOptions(regionId, d, def).filter((x) => cost(d, x) <= budget), (x) => x.tier);
+        claimLot(state, regionId, d.id, def, landPrice(state, regionId, d), b.id);
         r.lastAction = `Opened a new site in ${REGION[regionId].districts.find((q) => q.id === d.district)!.name}.`;
         if (rs.unlocked) {
           // Only a grab that competes with one of your businesses (same district + category) is worth a toast.
@@ -101,15 +114,19 @@ export function rivalAct(state: GameState, rivalId: string): void {
       }
     }
   }
-  // 3) Price war against the player in a district where both sell the same category.
-  if (roll < (acc += p.war) && rs.unlocked) {
-    const targets: { district: string; cat: string }[] = [];
+  // 3) Price war against the player in a district where both sell the same category. Like offers and
+  //    sabotage it waits ten minutes, and rivals only pick a fight you can answer: buying them out of
+  //    that district + category costs no more than your net worth (critic evaluation #2, finding 1).
+  if (roll < (acc += p.war) && rs.unlocked && state.t >= RIVAL_EVENTS_AFTER) {
+    const nw = netWorth(state);
+    const targets: { district: string; cat: string; cost: number }[] = [];
     for (const d of city.lots) {
       const ls = rs.lots[d.id];
       if (ls.owner !== 'player' || !ls.biz) continue;
       const cat = BIZ[ls.biz].category;
-      const theirs = city.lots.some((o) => rs.lots[o.id].owner === rivalId && rs.lots[o.id].biz && BIZ[rs.lots[o.id].biz!].category === cat && o.district === d.district);
-      if (theirs) targets.push({ district: d.district, cat });
+      if (theirCount(state, regionId, rivalId, d.district, cat) === 0) continue;
+      const cost = warBuyoutCost(state, regionId, rivalId, d.district, cat);
+      if (cost <= nw) targets.push({ district: d.district, cat, cost });
     }
     const already = state.buffs.some((b) => b.id.startsWith('war:' + rivalId) && b.until > state.t);
     if (targets.length && !already) {
@@ -119,7 +136,7 @@ export function rivalAct(state: GameState, rivalId: string): void {
       r.cash -= Math.min(r.cash * 0.02, 50_000);
       r.lastAction = `Price war on ${tg.cat} in ${dname}.`;
       state.rev++;
-      notify(state, `${def.name} slashed prices: your ${tg.cat} income in ${dname} is −35 % for 2 min. Buy out their ${tg.cat} business${theirCount(state, regionId, rivalId, tg.district, tg.cat) > 1 ? 'es' : ''} in ${dname} to end it.`, 'rival');
+      notify(state, `${def.name} slashed prices: your ${tg.cat} income in ${dname} is −35 % for 2 min. Buy out their ${tg.cat} business${theirCount(state, regionId, rivalId, tg.district, tg.cat) > 1 ? 'es' : ''} in ${dname} (about ${money(tg.cost)}) to end it.`, 'rival');
       return;
     }
   }
@@ -178,12 +195,12 @@ export function rivalAct(state: GameState, rivalId: string): void {
   }
 }
 
-/** Rivals bank their income continuously. */
+/** Rivals bank RIVAL_RETAIN of their income continuously (offline.ts does the same while you are away). */
 export function rivalIncome(state: GameState, dt: number): void {
   const d = derived(state);
   for (const [id, inc] of Object.entries(d.rivals)) {
     const r = state.rivals[id];
-    if (r && !r.acquired) r.cash += inc * dt;
+    if (r && !r.acquired) r.cash += inc * dt * RIVAL_RETAIN;
   }
 }
 
@@ -212,6 +229,17 @@ export function npcChurn(state: GameState): void {
       }
     }
   }
+}
+
+/** What buying a rival out of a district + category costs at their asking prices (ends a price war there). */
+export function warBuyoutCost(state: GameState, regionId: RegionId, rivalId: string, district: string, cat: string): number {
+  const rs = state.regions[regionId];
+  let c = 0;
+  for (const o of getCity(regionId).lots) {
+    const ls = rs.lots[o.id];
+    if (o.district === district && ls.owner === rivalId && ls.biz && BIZ[ls.biz].category === cat) c += rivalAsk(state, regionId, o.id);
+  }
+  return c;
 }
 
 /** How many businesses of a category a rival runs in a district. */

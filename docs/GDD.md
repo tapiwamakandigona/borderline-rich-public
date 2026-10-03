@@ -107,6 +107,14 @@ property at their asking price (value × (1.4 + greed)) and **acquire a whole ri
 1.3 × its net worth once your net worth is ≥ 1.5× theirs. The Rich List ranks you against
 every rival on the continent.
 
+Fair play (T12a): each rival starts at its designed size (`startWorth`, $250K–$40M): about 60 %
+in businesses on lots that suit its focus (levels ≤ 25), the rest in cash, so the biggest rival on
+paper is the biggest in the game. Rivals bank 25 % of their profit (the rest goes to owners), never
+spend money they don't have, and give a newcomer ten minutes before offers, sabotage or price
+wars. A price war only starts where buying the rival out of that district + category costs no more
+than your net worth, and its toast names that price. Measured with the balance bot (45 min, seed 21):
+you pass at least one home rival in every 1–2 star region.
+
 ## 9. Progression
 
 Ranks: Flat Broke → Hustler ($500) → Street Vendor ($5K) → Shopkeeper ($50K) → Entrepreneur

@@ -38,10 +38,10 @@ export const REGIONS: RegionDef[] = [
       { id: 'dockhands', name: 'Dockhands\' Union', leader: 'Big Tomas Reyes', color: '#c8553d', blurb: 'The people who actually lift the crates. Want wages and inspections.', platform: { minWage: 1.3, incomeTax: 0.17, enforcement: 0.6, categoryMods: { logistics: 0.9, hospitality: 1.1 } }, basePopularity: 0.25 },
     ],
     rivals: [
-      { id: 'vance', name: 'Vance Maritime', ceo: 'Victoria Vance', color: '#3e7cb1', personality: 'aggressive', focus: ['logistics', 'hospitality'], startCash: 6_000_000, startLots: 6, greed: 0.3, favFaction: 'freetraders', quote: 'The sea doesn\'t care who you are. Neither do I.' },
-      { id: 'bellamy', name: 'Bellamy & Daughters', ceo: 'Odette Bellamy', color: '#b07bac', personality: 'cautious', focus: ['retail', 'finance'], startCash: 3_500_000, startLots: 5, greed: 0.5, favFaction: 'oldguild', quote: 'We have been patient for two hundred years.' },
-      { id: 'corsair', name: 'Corsair Holdings', ceo: 'Rafe Marlowe', color: '#2f4858', personality: 'shady', focus: ['logistics', 'food'], startCash: 2_000_000, startLots: 4, greed: 0.2, favFaction: 'freetraders', quote: 'Paperwork is a suggestion.' },
-      { id: 'orsini', name: 'Orsini Trading', ceo: 'Luca Orsini', color: '#c1666b', personality: 'expansionist', focus: ['food', 'retail'], startCash: 1_200_000, startLots: 5, greed: 0.35, favFaction: 'dockhands', quote: 'Every corner should sell something of mine.' },
+      { id: 'vance', name: 'Vance Maritime', ceo: 'Victoria Vance', color: '#3e7cb1', personality: 'aggressive', focus: ['logistics', 'hospitality'], startWorth: 6_000_000, startLots: 6, greed: 0.3, favFaction: 'freetraders', quote: 'The sea doesn\'t care who you are. Neither do I.' },
+      { id: 'bellamy', name: 'Bellamy & Daughters', ceo: 'Odette Bellamy', color: '#b07bac', personality: 'cautious', focus: ['retail', 'finance'], startWorth: 3_500_000, startLots: 5, greed: 0.5, favFaction: 'oldguild', quote: 'We have been patient for two hundred years.' },
+      { id: 'corsair', name: 'Corsair Holdings', ceo: 'Rafe Marlowe', color: '#2f4858', personality: 'shady', focus: ['logistics', 'food'], startWorth: 2_000_000, startLots: 4, greed: 0.2, favFaction: 'freetraders', quote: 'Paperwork is a suggestion.' },
+      { id: 'orsini', name: 'Orsini Trading', ceo: 'Luca Orsini', color: '#c1666b', personality: 'expansionist', focus: ['food', 'retail'], startWorth: 1_200_000, startLots: 5, greed: 0.35, favFaction: 'dockhands', quote: 'Every corner should sell something of mine.' },
     ],
     districts: [
       { id: 'oldport', name: 'Old Port', zone: 'water', land: 1.3, fit: { food: 1.3, hospitality: 1.35, retail: 1.1, logistics: 1.2 } },
@@ -81,9 +81,9 @@ export const REGIONS: RegionDef[] = [
       { id: 'reform', name: 'Clean Sweep Reform', leader: 'Judge Ellen Park', color: '#5b8e7d', blurb: 'Anti-corruption crusaders. If they win, every gift becomes evidence.', platform: { enforcement: 0.75, regulation: 0.45, incomeTax: 0.12, importTariff: 0.2 }, basePopularity: 0.2 },
     ],
     rivals: [
-      { id: 'crane', name: 'Crane Petroleum', ceo: 'Lorna Crane', color: '#d1495b', personality: 'aggressive', focus: ['energy', 'industry'], startCash: 9_000_000, startLots: 6, greed: 0.4, favFaction: 'circle', quote: 'My brother-in-law signs the permits. Any questions?' },
-      { id: 'sable', name: 'Sable Ridge Minerals', ceo: 'Dmitri Sable', color: '#7a4a2a', personality: 'shady', focus: ['energy', 'logistics'], startCash: 5_000_000, startLots: 5, greed: 0.25, favFaction: 'prospectors', quote: 'Out here, accidents happen.' },
-      { id: 'tworivers', name: 'Two Rivers Supply', ceo: 'Hank Okafor', color: '#4f772d', personality: 'cautious', focus: ['retail', 'food'], startCash: 1_200_000, startLots: 4, greed: 0.5, favFaction: 'reform', quote: 'Honest goods at honest prices. Lonely work.' },
+      { id: 'crane', name: 'Crane Petroleum', ceo: 'Lorna Crane', color: '#d1495b', personality: 'aggressive', focus: ['energy', 'industry'], startWorth: 9_000_000, startLots: 6, greed: 0.4, favFaction: 'circle', quote: 'My brother-in-law signs the permits. Any questions?' },
+      { id: 'sable', name: 'Sable Ridge Minerals', ceo: 'Dmitri Sable', color: '#7a4a2a', personality: 'shady', focus: ['energy', 'logistics'], startWorth: 5_000_000, startLots: 5, greed: 0.25, favFaction: 'prospectors', quote: 'Out here, accidents happen.' },
+      { id: 'tworivers', name: 'Two Rivers Supply', ceo: 'Hank Okafor', color: '#4f772d', personality: 'cautious', focus: ['retail', 'food'], startWorth: 1_200_000, startLots: 4, greed: 0.5, favFaction: 'reform', quote: 'Honest goods at honest prices. Lonely work.' },
     ],
     districts: [
       { id: 'maindrag', name: 'Main Drag', zone: 'center', land: 1.4, fit: { retail: 1.25, food: 1.2, hospitality: 1.1 } },
@@ -123,10 +123,10 @@ export const REGIONS: RegionDef[] = [
       { id: 'housing', name: 'Housing First', leader: 'Councillor Bea Lindqvist', color: '#ff3e9a', blurb: 'Rent caps and wage floors. Hotels and landlords pay.', platform: { incomeTax: 0.26, minWage: 1.45, categoryMods: { hospitality: 0.8, retail: 1.1, food: 1.1 } }, basePopularity: 0.25 },
     ],
     rivals: [
-      { id: 'quanta', name: 'Quanta Dynamics', ceo: 'Priya Raman', color: '#9b5de5', personality: 'aggressive', focus: ['tech', 'finance'], startCash: 40_000_000, startLots: 6, greed: 0.45, favFaction: 'accelerate', quote: 'We don\'t compete. We acquire.' },
-      { id: 'hyperloom', name: 'Hyperloom', ceo: 'Kai Mercer', color: '#00a6a6', personality: 'expansionist', focus: ['tech', 'services'], startCash: 18_000_000, startLots: 5, greed: 0.3, favFaction: 'accelerate', quote: 'Scale first. Business model later.' },
-      { id: 'nimbus', name: 'Nimbus Labs', ceo: 'Sofia Lindqvist', color: '#4361ee', personality: 'cautious', focus: ['tech', 'food'], startCash: 9_000_000, startLots: 4, greed: 0.5, favFaction: 'fairtech', quote: 'Profitable. Boring. Still here.' },
-      { id: 'glasshouse', name: 'Glasshouse Capital', ceo: 'Dorian Holt', color: '#f72585', personality: 'shady', focus: ['finance', 'hospitality'], startCash: 25_000_000, startLots: 4, greed: 0.35, favFaction: 'accelerate', quote: 'Transparency is for windows.' },
+      { id: 'quanta', name: 'Quanta Dynamics', ceo: 'Priya Raman', color: '#9b5de5', personality: 'aggressive', focus: ['tech', 'finance'], startWorth: 40_000_000, startLots: 6, greed: 0.45, favFaction: 'accelerate', quote: 'We don\'t compete. We acquire.' },
+      { id: 'hyperloom', name: 'Hyperloom', ceo: 'Kai Mercer', color: '#00a6a6', personality: 'expansionist', focus: ['tech', 'services'], startWorth: 18_000_000, startLots: 5, greed: 0.3, favFaction: 'accelerate', quote: 'Scale first. Business model later.' },
+      { id: 'nimbus', name: 'Nimbus Labs', ceo: 'Sofia Lindqvist', color: '#4361ee', personality: 'cautious', focus: ['tech', 'food'], startWorth: 9_000_000, startLots: 4, greed: 0.5, favFaction: 'fairtech', quote: 'Profitable. Boring. Still here.' },
+      { id: 'glasshouse', name: 'Glasshouse Capital', ceo: 'Dorian Holt', color: '#f72585', personality: 'shady', focus: ['finance', 'hospitality'], startWorth: 25_000_000, startLots: 4, greed: 0.35, favFaction: 'accelerate', quote: 'Transparency is for windows.' },
     ],
     districts: [
       { id: 'core', name: 'The Core', zone: 'center', land: 1.7, fit: { finance: 1.6, tech: 1.35, services: 1.1 } },
@@ -169,8 +169,8 @@ export const REGIONS: RegionDef[] = [
       { id: 'mainstreet', name: 'Main Street Alliance', leader: 'Mayor Rosa Kim', color: '#a63a2b', blurb: 'Protect the little shops. Tax breaks for small business.', platform: { incomeTax: 0.11, smallBizRelief: 1.25 }, basePopularity: 0.3 },
     ],
     rivals: [
-      { id: 'harlan', name: 'Harlan Agri-Corp', ceo: 'Walt Harlan', color: '#9c6644', personality: 'expansionist', focus: ['agri', 'industry'], startCash: 900_000, startLots: 6, greed: 0.3, favFaction: 'agricorp', quote: 'Every acre, eventually.' },
-      { id: 'fieldstone', name: 'Fieldstone Foods', ceo: 'June Abernathy', color: '#606c38', personality: 'cautious', focus: ['food', 'retail'], startCash: 250_000, startLots: 4, greed: 0.4, favFaction: 'mainstreet', quote: 'Pie recipes older than your grandmother.' },
+      { id: 'harlan', name: 'Harlan Agri-Corp', ceo: 'Walt Harlan', color: '#9c6644', personality: 'expansionist', focus: ['agri', 'industry'], startWorth: 900_000, startLots: 6, greed: 0.3, favFaction: 'agricorp', quote: 'Every acre, eventually.' },
+      { id: 'fieldstone', name: 'Fieldstone Foods', ceo: 'June Abernathy', color: '#606c38', personality: 'cautious', focus: ['food', 'retail'], startWorth: 250_000, startLots: 4, greed: 0.4, favFaction: 'mainstreet', quote: 'Pie recipes older than your grandmother.' },
     ],
     districts: [
       { id: 'mainstreet', name: 'Main Street', zone: 'center', land: 1.4, fit: { retail: 1.4, food: 1.3, services: 1.1 } },
@@ -210,9 +210,9 @@ export const REGIONS: RegionDef[] = [
       { id: 'offshorebloc', name: 'Offshore Bloc', leader: 'Sir Reginald Pike', color: '#e9c46a', blurb: 'Low taxes, lower curiosity.', platform: { incomeTax: 0.04, enforcement: 0.2, categoryMods: { finance: 1.4 } }, basePopularity: 0.28 },
     ],
     rivals: [
-      { id: 'azure', name: 'Azure Crown Resorts', ceo: 'Marisol Duarte', color: '#0077b6', personality: 'aggressive', focus: ['hospitality', 'food'], startCash: 7_000_000, startLots: 5, greed: 0.4, favFaction: 'tourism', quote: 'Every sunset on this island has my logo on it.' },
-      { id: 'palmetto', name: 'Palmetto Holdings', ceo: 'Teddy Banks', color: '#e76f51', personality: 'shady', focus: ['finance', 'hospitality'], startCash: 3_000_000, startLots: 4, greed: 0.3, favFaction: 'offshorebloc', quote: 'My accountant has an accountant.' },
-      { id: 'islarum', name: 'Isla Rum Co.', ceo: 'Celestine Joly', color: '#9c6644', personality: 'cautious', focus: ['food', 'retail'], startCash: 600_000, startLots: 4, greed: 0.45, favFaction: 'green', quote: 'Aged twelve years. Like our grudges.' },
+      { id: 'azure', name: 'Azure Crown Resorts', ceo: 'Marisol Duarte', color: '#0077b6', personality: 'aggressive', focus: ['hospitality', 'food'], startWorth: 7_000_000, startLots: 5, greed: 0.4, favFaction: 'tourism', quote: 'Every sunset on this island has my logo on it.' },
+      { id: 'palmetto', name: 'Palmetto Holdings', ceo: 'Teddy Banks', color: '#e76f51', personality: 'shady', focus: ['finance', 'hospitality'], startWorth: 3_000_000, startLots: 4, greed: 0.3, favFaction: 'offshorebloc', quote: 'My accountant has an accountant.' },
+      { id: 'islarum', name: 'Isla Rum Co.', ceo: 'Celestine Joly', color: '#9c6644', personality: 'cautious', focus: ['food', 'retail'], startWorth: 600_000, startLots: 4, greed: 0.45, favFaction: 'green', quote: 'Aged twelve years. Like our grudges.' },
     ],
     districts: [
       { id: 'malecon', name: 'Malecón', zone: 'water', land: 1.4, fit: { hospitality: 1.6, food: 1.4, retail: 1.1 } },
@@ -252,9 +252,9 @@ export const REGIONS: RegionDef[] = [
       { id: 'greenrail', name: 'Green Rail Party', leader: 'Ilse Novak', color: '#4caf7a', blurb: 'Clean air, electric trains, coal out.', platform: { regulation: 0.65, categoryMods: { energy: 0.7, logistics: 1.2 } }, basePopularity: 0.2 },
     ],
     rivals: [
-      { id: 'krauss', name: 'Krauss Steelworks', ceo: 'Greta Krauss', color: '#5c677d', personality: 'aggressive', focus: ['industry', 'energy'], startCash: 8_000_000, startLots: 6, greed: 0.35, favFaction: 'industrialists', quote: 'Iron doesn\'t negotiate.' },
-      { id: 'northline', name: 'Northline Motors', ceo: 'Anton Varga', color: '#1b998b', personality: 'expansionist', focus: ['industry', 'logistics'], startCash: 4_000_000, startLots: 5, greed: 0.3, favFaction: 'industrialists', quote: 'Every road in Ironhold leads to a Northline dealer.' },
-      { id: 'grauwald', name: 'Grauwald Coal', ceo: 'Otto Grauwald', color: '#33415c', personality: 'shady', focus: ['energy', 'industry'], startCash: 2_000_000, startLots: 4, greed: 0.25, favFaction: 'workers', quote: 'Coal kept this city warm. Remember that at the ballot box.' },
+      { id: 'krauss', name: 'Krauss Steelworks', ceo: 'Greta Krauss', color: '#5c677d', personality: 'aggressive', focus: ['industry', 'energy'], startWorth: 8_000_000, startLots: 6, greed: 0.35, favFaction: 'industrialists', quote: 'Iron doesn\'t negotiate.' },
+      { id: 'northline', name: 'Northline Motors', ceo: 'Anton Varga', color: '#1b998b', personality: 'expansionist', focus: ['industry', 'logistics'], startWorth: 4_000_000, startLots: 5, greed: 0.3, favFaction: 'industrialists', quote: 'Every road in Ironhold leads to a Northline dealer.' },
+      { id: 'grauwald', name: 'Grauwald Coal', ceo: 'Otto Grauwald', color: '#33415c', personality: 'shady', focus: ['energy', 'industry'], startWorth: 2_000_000, startLots: 4, greed: 0.25, favFaction: 'workers', quote: 'Coal kept this city warm. Remember that at the ballot box.' },
     ],
     districts: [
       { id: 'exchange', name: 'Exchange Square', zone: 'center', land: 1.5, fit: { finance: 1.4, hospitality: 1.2, retail: 1.1 } },
