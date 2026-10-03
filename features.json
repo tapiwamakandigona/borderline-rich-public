@@ -23,7 +23,7 @@
       "acceptance": "6 regions, each with a distinct government type, signature mechanic that measurably changes outcomes, laws/tariffs, >=2 factions, >=2 named rivals, 5 districts, >=6 region-only events and a distinct visual theme; pairwise-distinct economy profiles",
       "verify": "npx vitest run tests/regions.test.ts",
       "passes": true,
-      "evidence": "2026-10-03: npx vitest run tests/regions.test.ts -> 11 passed, incl. new theme test (unique roofStyle/windowStyle/outskirts per region; pairwise palette distance > 40)."
+      "evidence": "VERIFIED 2026-10-03 (T10c/T10g+, 3f75649): tests/regions.test.ts 18/18 — unique theme per region, region-only tier-1 starters, Solenne free port, Red Mesa permits, Ironhold wage deal cost/ceiling, party standing, Neon Vale vendor medallion (VERIFIED fails with licences: {}). tests/difficulty.test.ts 7/7 (real sim + bot, 3 seeds x 30 min): signature category share at 20 min — Solenne logistics 32-56 %, Red Mesa energy 35-43 %, Neon Vale tech 69-79 %, Amberfield agri 52-64 %, Verano hospitality 53-68 %, Ironhold industry 39-46 %. 12-seed scan: Neon Vale tech 46-79 % (was min 11 %); Solenne min 20 % on seed 8 (M2 finding)."
     },
     {
       "id": "F4",
@@ -39,7 +39,7 @@
       "acceptance": "Buy vacant lot + business, buy NPC business, upgrade x1/x10, hire manager, collect till; district fit, competition and chain synergy change income as specified in GDD",
       "verify": "npx vitest run tests/economy.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/economy.test.ts 7/7 — land+biz pricing, footprint limits, NPC 1.2x, geometric upgrades x1/x10/max, L10 milestone, till cap 120 s (never shrinks), exact manager accounting, competition 1/1.12, chain synergy +5 %."
+      "evidence": "VERIFIED 2026-10-03: tests/economy.test.ts 8/8 — land+biz pricing, footprint limits, NPC 1.2x, geometric upgrades x1/x10/max, L10 milestone, till cap 120 s, exact manager accounting, competition 1/1.12, chain synergy +5 %, and (T10d) the lot-card '≈ $/s' projectIncome() equals the real income after purchase to 1e-9 in 6 regions x starter/cart/kiosk + a rival lot."
     },
     {
       "id": "F6",
@@ -55,7 +55,7 @@
       "acceptance": "Factions with platforms; elections/decrees per government type (incl. rigged elections and permanent guild seats); player political actions; winning platform changes laws that change income/tariffs",
       "verify": "npx vitest run tests/politics.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/politics.test.ts 7/7 — platform sets laws; government change changes income; donations raise odds then reset; Solenne guild seats permanent+escalating; Red Mesa incumbent >70 %, gifts add heat, Reform scandals; per-region election schedules."
+      "evidence": "VERIFIED 2026-10-03: tests/politics.test.ts 7/7 — platform sets laws; government change changes income; donations raise odds then reset; Solenne guild seats permanent+escalating; Red Mesa incumbent >70 %, gifts add heat, Reform scandals; per-region election schedules. T10g (3f75649) regions.test: standing with the ruling party >= 50 cuts income tax x0.8 and customs risk x0.8, <= -25 raises them x1.2/x1.3, Red Mesa permits x0.5/x1.5; Ironhold wage deal costs money and caps at +30 %."
     },
     {
       "id": "F8",
@@ -63,7 +63,7 @@
       "acceptance": "Rivals earn, buy and upgrade lots over time, start price wars and offers; player can buy rival lots and acquire a whole rival; Rich List ranks player + all rivals",
       "verify": "npx vitest run tests/rivals.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/rivals.test.ts 6/6 — rivals grow in >=5/6 regions over 20 min and lobby; buy rival lot at ask; acquisition gates (1.5x NW, 1.3x cash) and absorbs all lots; price war = exactly x0.65; offers via events; Rich List of 20 sorted."
+      "evidence": "VERIFIED 2026-10-03: tests/rivals.test.ts 8/8 — rivals grow in >=5/6 regions over 20 min and lobby; buy rival lot at ask; acquisition gates (1.5x NW, 1.3x cash) absorb all lots; price war = exactly x0.65 and (T10g) ends when you buy the rival out of that district + category; offers via events only after 600 s and only for lots >= $4k x cost index; Rich List of 20 sorted."
     },
     {
       "id": "F9",
@@ -71,7 +71,7 @@
       "acceptance": ">= 8 global and >= 6 per-region events; choices include probabilistic outcomes; amounts scale with progress; effects apply correctly",
       "verify": "npx vitest run tests/events.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/events.test.ts 6/6 — 12 global + 7 per region (+3 system), >=20 risky events; scale grows with income; exact outcome application; seeded risky branches with 2-branch previews; specials (sell to rival, wage deal); >=6 events per 30-min session."
+      "evidence": "VERIFIED 2026-10-03: tests/events.test.ts 7/7 — 12 global + 7 per region (+3 system), >=20 risky events; scale grows with income; exact outcome application; seeded risky branches with 2-branch previews; specials (sell to rival, wage deal); >=6 events per 30-min session; (T10g) sampling the real picker, local events dominate the first 20 min in every region (VERIFIED fails under the old weighting: 'solenne: expected 0.66 to be greater than 0.76')."
     },
     {
       "id": "F10",
@@ -103,7 +103,7 @@
       "acceptance": "Each region renders a procedurally built city with its own palette/architecture/props, day-night, water or terrain features, traffic and weather; headless budget <= 220 draw calls and <= 500k triangles; a screenshot per region is captured and reviewed",
       "verify": "npm run build:test && npx playwright test e2e/world.spec.ts",
       "passes": true,
-      "evidence": "2026-10-03: npm run build:test && npx playwright test e2e/world.spec.ts -> 7 passed (select flyover + 6 regions day/wide/night). Budget asserted <=220 calls, <=500k tris (observed 34-39 calls, 104k-287k tris at high). 19 screenshots in e2e/__shots__ reviewed by eye; fixed vacant-lot sparseness, Solenne coast framing, Neon Vale far shore and night glare after review."
+      "evidence": "VERIFIED 2026-10-03 (T10e/T10f, 3f75649): npm run build:test && npx playwright test -> 10/10, world.spec 8/8 (flyover + small-phone select + 6 regions day/wide/night). Budget asserted <=220 calls, <=500k tris; observed 72-96 calls, 164k-393k tris (Verano palm trim 618,992 -> 395,144). One lot change rebuilds 1 chunk (1/6-1/9) in 12-30 ms vs 79-95 ms full city. Each region spawns at its own landmark; level-band growth + squash-and-stretch; blue-hour nights. 18 world shots + UI shots reviewed by eye."
     },
     {
       "id": "F14",
@@ -111,7 +111,7 @@
       "acceptance": "Touch joystick moves the player; drag orbits; pinch zooms; tapping a building opens its card",
       "verify": "npm run build:test && npx playwright test e2e/controls.spec.ts",
       "passes": true,
-      "evidence": "2026-10-03: npx playwright test e2e/controls.spec.ts -> 1 passed. CDP Input.dispatchTouchEvent: joystick moved player >3 m, right-half drag changed azimuth >0.2 rad, two-finger pinch cut camera distance >15 %, tap on a building opened the lot card."
+      "evidence": "VERIFIED 2026-10-03: e2e/controls.spec.ts — CDP Input.dispatchTouchEvent: joystick moved player >3 m, right-half drag changed azimuth >0.2 rad, pinch cut camera distance >15 %, tap on a building opened the lot card; taps timed from event timestamps (8542ec9, no slow-frame long-press). world.spec 'region select fits small phones' (697cdbf, 360x640): real touch drags scroll a card and swipe to the next region, every Start button fully on screen, starting works (VERIFIED fails on the old layout)."
     },
     {
       "id": "F15",
@@ -119,7 +119,7 @@
       "acceptance": "Region select -> game; HUD; Empire/Trade/Politics/Rivals/Store sheets; event modal; buy flow from the world; no console errors in a scripted session",
       "verify": "npm run build:test && npx playwright test e2e/ui.spec.ts",
       "passes": true,
-      "evidence": "2026-10-03: npx playwright test e2e/ui.spec.ts -> 1 passed. Region select -> game, 12 hustles + goal, walk-up buy of a cart, upgrade, collect, all 5 sheets (ship cargo, donate, sandbox gold purchase +120), event modal resolve, reload keeps the save; zero page/console errors."
+      "evidence": "VERIFIED 2026-10-03: e2e/ui.spec.ts 1/1 — region select -> game, hustles + goal, walk-up buy of a cart, upgrade (squash-and-stretch pulse starts and ends), collect, all 5 sheets (ship cargo, donate, sandbox gold purchase +120), event modal resolve with held toast, no rank-up/toast over modals or the lot card, reload keeps the save; zero page/console errors. Full e2e 10/10 locally in 5.1 min."
     },
     {
       "id": "F16",
@@ -135,7 +135,7 @@
       "acceptance": "Bot playing the real sim for 45 simulated minutes reaches $50K-$50M net worth in every region, never produces NaN/negative cash, and the easy region outpaces the expert region",
       "verify": "npx vitest run tests/balance.test.ts",
       "passes": true,
-      "evidence": "VERIFIED 2026-10-03: tests/balance.test.ts — 45-min bot net worth: solenne $3.25M, redmesa $9.66M, neonvale $4.26M, amberfield $16.1M, verano $13.1M, ironhold $2.98M (seed 21; seeds 7/99 within $1.8M–$20.4M); no NaN, cash never negative; Amberfield/0.7 > Neon Vale/2.2."
+      "evidence": "VERIFIED 2026-10-03: tests/balance.test.ts 8/8 — 45-min bot net worth (seed 21): solenne $4.79M, redmesa $6.19M, neonvale $3.25M, amberfield $20.0M, verano $15.8M, ironhold $2.32M; first business 11.9-16.2 s; no NaN, cash never negative. tests/difficulty.test.ts: stars order purchasing-power net worth pairwise over 3 seeds with a 25 % margin (pp@30m: Amberfield $4.70-17.4M, Verano $5.95-8.52M, Red Mesa $3.78-6.92M, Solenne $1.10-2.78M, Ironhold $794K-1.22M, Neon Vale $649-757K)."
     }
   ]
 }
