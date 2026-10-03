@@ -83,3 +83,20 @@
   - Signing: PKCS12 upload/release key (RSA 4096, valid to 2056, SHA-256 8D:4D:CD:47:…:FD:A7) generated with openssl into the operator secrets store; sealed into the public repo's Actions secrets (ANDROID_KEYSTORE_B64/PASSWORD/KEY_ALIAS; API list VERIFIED). Never in git (*.p12/*.jks/*.keystore ignored).
   - CI: apk job (assembleRelease when the key exists, else assembleDebug; apksigner verify + aapt2 badging) → device-smoke (API 35 emulator, KVM: install, wait for "Start in …" in the accessibility tree, tap, tap Hustle 8×, cash must rise, no FATAL/ANR; screenshots uploaded) → release (main only, after e2e + smoke): rolling `playtest` pre-release with borderline-rich.apk.
   - ASSUMED: the emulator smoke needs KVM on standard GitHub runners (public repos have it); first CI run on the public repo is the evidence for F18.
+
+## 2026-10-03 12:30 UTC — T11 closed: APK green end to end (builder handover)
+- Handover: the owner said at 11:41 UTC that the previous builder stopped after pushing T11 (9ce1ad7, 10:58 UTC). Its uncommitted T12a rivals work was lost with its sandbox. Viktor (owner's app thread) is now the one builder. Commits are authored "Viktor".
+- The device smoke failed three times. Each failure had its own cause, read from the run artifacts:
+  1. 37118153623: Android's one-time "Viewing full screen" confirmation covered the WebView. Fix 67e312d: `settings put secure immersive_mode_confirmations confirmed`, plus a "Got it" fallback.
+  2. 37119066023: three separate problems. The HUD money card is a single "$0$0/s" node, which the parser missed. A timed-out uiautomator dump was read back stale. A tap during a slow frame counted as Hustle's long-press. Fix dd87e83: card regex, fresh dumps, and close-and-retry rounds.
+  3. 37120096245: no city dump at all in 30 tries, though fail.png shows the HUD. uiautomator only dumps after 1 s without accessibility events, and the idle HUD changed about 10 times a second. Fix a715fd3:
+     - Preact 11 rewrites a numeric-0 text child on every render (`oldProps = oldVNode.props || EMPTY_OBJ`). Heat and rep now render as strings.
+     - The clock moved every game minute (1/6 s). It now moves in 15-minute steps.
+     - CountUp writes only changed text.
+     - New e2e/a11y.spec.ts: old code 0.51 s still (FAIL); only the clock left unfixed 0.59 s (FAIL); fixed 2.61 s (PASS).
+- VERIFIED: run 37122408326 on main a715fd3 is green in every job, and it published Playtest build #5.
+  - apk: versionCode 5, apksigner V2 SHA-256 8d4dcd47…fda7.
+  - device-smoke: "cash before=0.0 after=6.3", SMOKE OK.
+  - e2e: 12/12.
+  - F18 and F1 flipped with that evidence.
+- FINDING: the branch run 37121579181 failed e2e only at world.spec amberfield. A 1-chunk rebuild took 45.3 ms against 71.6 ms for the full city (limit < 0.6x). The same code on main measured 12.8 ms against 97.9 ms. It is a single-sample wall-clock timing check on a shared runner. Possible follow-up: take the minimum of 3 samples for both timings, with the 0.6x threshold unchanged.

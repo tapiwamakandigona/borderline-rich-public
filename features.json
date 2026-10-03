@@ -6,8 +6,8 @@
       "title": "Harness, CI and state files",
       "acceptance": "AGENTS.md <= 100 lines; PROJECT.md, features.json, progress.md, plan.md exist; boot set within budget; GitHub Actions runs npm run ci and e2e",
       "verify": "npm run ci",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "VERIFIED 2026-10-03: AGENTS.md 57 lines; PROJECT.md, features.json, progress.md, plan.md present; check_budget: boot set 18,794 bytes (limit 32,000). GitHub Actions on borderline-rich-public runs `npm run ci` (gate) and `npx playwright test` (e2e): run 37122408326 (a715fd3) gate + e2e green (12/12). Local npm run ci: 13 files / 98 tests green."
     },
     {
       "id": "F2",
@@ -142,8 +142,8 @@
       "title": "Android APK",
       "acceptance": "Capacitor Android project in git; CI on the public repo builds a release APK signed with a stable key (apksigner verifies, versionCode = run number), installs it on an Android emulator, starts a game and earns cash by hustling with no crash; the APK is published as the rolling 'playtest' release; Android back closes the top overlay before leaving the app (e2e)",
       "verify": "GitHub Actions on tapiwamakandigona/borderline-rich-public: jobs apk + device-smoke + release green; npx playwright test -g 'back closes'",
-      "passes": false,
-      "evidence": ""
+      "passes": true,
+      "evidence": "VERIFIED 2026-10-03: public CI run 37122408326 on main a715fd3 (run #5) green in every job. apk: assembleRelease BUILD SUCCESSFUL, apksigner V2 signer SHA-256 8d4dcd47...fda7 (the key in repo secrets), aapt2 versionCode=5 = run number, versionName 0.1.0-build.5. device-smoke (API 35 emulator): Success install, versionCode=5, 'Start button at 482 2160', 'cash before=0.0 after=6.3', SMOKE OK, no FATAL/ANR. release: rolling 'playtest' pre-release 'Playtest build #5' with borderline-rich.apk (3,613,332 B) published 12:27:56Z, target a715fd3. e2e 12/12 incl. 'back closes the top overlay first; events still need a choice' and e2e/a11y.spec.ts (idle HUD still for 2.71 s; uiautomator needs 1 s)."
     }
   ]
 }

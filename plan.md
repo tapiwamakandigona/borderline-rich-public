@@ -84,10 +84,11 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         sticky Start, one-line title + e2e with real touch drags (F14)
   - [x] T10h Re-run the critic → evaluation #2 (2026-10-03 10:45 UTC): **NEEDS_WORK**, prior findings
         10 FIXED / 4 PARTIAL, 11 new findings → T12 below
-- [ ] T11 Android APK + public CI copy (owner request 2026-10-03 10:37 UTC) (F18, F1): Capacitor 8 `android/`
+- [x] T11 Android APK + public CI copy (owner request 2026-10-03 10:37 UTC) (F18, F1): Capacitor 8 `android/`
       (portrait, immersive, branded icon/splash from `public/icon.svg`), back button + pause/resume via
       `src/app/native.ts`, public repo `borderline-rich-public` with signing secrets, CI jobs apk →
-      device-smoke (emulator: install, Start, hustle, screenshots) → rolling `playtest` release
+      device-smoke (emulator: install, Start, hustle, screenshots) → rolling `playtest` release.
+      First fully green run: 37122408326 (a715fd3), Playtest build #5 (2026-10-03 12:27 UTC)
 - T12 fix list — critic evaluation #2, player-impact order (finding # in `evaluation.json` in brackets):
   - [ ] T12a Rivals play fair: no price war on a brand-new player (same 600 s gate as offers/sabotage),
         an affordable remedy; rivals seeded at their designed size (startCash, capped levels; the
