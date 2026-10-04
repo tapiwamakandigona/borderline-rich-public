@@ -162,3 +162,10 @@
   from energy, so it now asks for a Gas Station. Threshold unchanged. Shares @20m now 33-88 % everywhere.
 - Save compat: saves past goal index 3 shift by 1-2 goals; done goals may re-pay once (internal testers only).
 - VERIFIED: `npm run ci` passed (118/118 vitest incl. new tests/regionGoals.test.ts, build, budget 20752/32000).
+
+## 2026-10-04 — T12f visuals (critic #2 finding 13)
+- camera.ts FOLLOW = { dist: 92, polar: 0.84, lead: 9 } (was 66/0.76/7): follow view frames whole blocks.
+- themes.ts Neon Vale day: brighter hemi (sky 0xb4c2de, ground 0x4a5266, 1.3) and lighter ground/lot/plaza/
+  asphalt/sidewalk so the day scene reads instead of muddy slate. Amberfield plaza/sidewalk now meadow tones.
+- VERIFIED: e2e/world.spec.ts 8 passed (max 98-102 draw calls / 220, max 387k tris / 500k); screenshots
+  for neonvale day+night, amberfield, solenne reviewed. `npm run ci` passed (CI_RC=0, budget 20752/32000).

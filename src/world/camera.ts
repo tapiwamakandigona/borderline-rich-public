@@ -2,10 +2,10 @@
 // the region picker and trauma-based shake (camera only, never the UI).
 import * as THREE from 'three';
 
-/** Default follow framing (critic #6c): high enough that the roof in front of the camera doesn't
- *  fill the screen, with the look point led ahead so the player sits in the lower-middle of a
- *  portrait screen and you see the street ahead. */
-export const FOLLOW = { dist: 66, polar: 0.76, lead: 7 };
+/** Default follow framing (critic #6c, T12f): pulled back and tilted toward top-down so a portrait
+ *  screen shows whole blocks and their rooftops instead of 30-40 % empty asphalt, with the look
+ *  point led ahead so the player sits in the lower-middle and you see the street ahead. */
+export const FOLLOW = { dist: 92, polar: 0.84, lead: 9 };
 
 export class CameraRig {
   readonly camera: THREE.PerspectiveCamera;
