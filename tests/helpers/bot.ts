@@ -9,6 +9,8 @@ import { EVENT } from '../../src/core/data/events';
 import { getCity } from '../../src/core/city';
 import { allowedBiz, bizCost, demandMult, derived, fitMult, incomeIndex, landPrice, npcAsk, upgradeCost } from '../../src/core/economy';
 import { laws } from '../../src/core/laws';
+import { goalsFor } from '../../src/core/data/progression';
+import { SIGNATURE_CATEGORY } from '../../src/core/mechanics';
 import {
   buyNpc, buyVacant, collect, hireManager, hustleCost, hustlePerTap, hustleTap, managerCost, resolveEvent, upgradeHustle, upgradeLot,
 } from '../../src/core/actions';
@@ -45,13 +47,17 @@ function options(s: GameState, hustling: boolean, tps: number): Option[] {
   const city = getCity(r);
   const rs = s.regions[r];
   const out: Option[] = [];
+  // A reasonable player follows the on-screen goal: while a signature goal ("Run 2 logistics
+  // businesses", "own 3 farms") is current, home-signature builds look twice as attractive.
+  const goal = goalsFor(s.homeRegion)[s.goalIndex];
+  const sigBias = goal?.id.startsWith('sig_') && r === s.homeRegion ? SIGNATURE_CATEGORY[r] : null;
   for (const def of city.lots) {
     const ls = rs.lots[def.id];
     if (ls.owner === 'vacant') {
       for (const b of allowedBiz(r, def)) {
         const cost = landPrice(s, r, def) + bizCost(s, r, b);
         const inc = estIncome(s, r, def.district, b.id);
-        if (inc > 0) out.push({ payback: cost / inc, cost, run: () => buyVacant(s, r, def.id, b.id).ok });
+        if (inc > 0) out.push({ payback: (cost / inc) * (b.category === sigBias ? 0.5 : 1), cost, run: () => buyVacant(s, r, def.id, b.id).ok });
       }
     } else if (ls.owner === 'npc' && ls.biz) {
       const cost = npcAsk(s, r, def.id);

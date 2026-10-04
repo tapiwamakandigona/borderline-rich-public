@@ -150,3 +150,15 @@
   lots with a gold "Local pick" tag. VERIFIED: new e2e `toasts stay clear … (360x640)` passes locally
   (card + empire + politics sheets, bounding boxes vs cash card and `.lot-head`); full `ui.spec` earlier run:
   the 2 existing tests passed. `npm run ci` passed (typecheck, vitest, build, budget 20752/32000).
+
+## 2026-10-04 — T12e region goal chains (critic #2 finding 8)
+- `REGION_GOALS` + `goalsFor(home)` in progression.ts: two signature goals per region woven in after
+  'collect' and after 'level5' (Solenne: 2 logistics, ship cargo; Red Mesa: 2 energy, open a Gas Station
+  (permit); Neon Vale: 2 tech, VC round; Amberfield: 2 farms, 3-farm co-op; Verano: 2 hospitality,
+  hurricane cover; Ironhold: 2 industry, wage deal). sim.ts and Hud.tsx use the per-region chain.
+- Balance bot now follows the on-screen goal (signature builds look 2x as attractive while a sig_ goal is
+  current). First CI run without that failed difficulty share >= 25 % (Solenne 22.5 %, Red Mesa 20.6 %):
+  the reward-timing shift was chaos noise, and Red Mesa's old goal 2 ("any non-Fuel-Pump") pulled away
+  from energy, so it now asks for a Gas Station. Threshold unchanged. Shares @20m now 33-88 % everywhere.
+- Save compat: saves past goal index 3 shift by 1-2 goals; done goals may re-pay once (internal testers only).
+- VERIFIED: `npm run ci` passed (118/118 vitest incl. new tests/regionGoals.test.ts, build, budget 20752/32000).

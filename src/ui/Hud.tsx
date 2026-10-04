@@ -4,7 +4,7 @@ import { useSession, CountUp } from './kit';
 import { Icon } from './icons';
 import { derived, netWorth } from '../core/economy';
 import { money, perSec, duration } from '../core/format';
-import { RANKS, GOALS } from '../core/data/progression';
+import { RANKS, goalsFor } from '../core/data/progression';
 import { REGION } from '../core/data/regions';
 import { DAY } from '../core/constants';
 import { SEASONS, SEASON_MULT, seasonIndex, highSeason, TOURISM_HIGH, TOURISM_LOW, strikeActive, PORT_MAX_SHIPS, portMult, portShipments } from '../core/mechanics';
@@ -71,7 +71,7 @@ export function Hud() {
   const ri = st.stats.rankIndex;
   const rank = RANKS[ri], nextRank = RANKS[ri + 1];
   const rankPct = nextRank ? Math.max(0, Math.min(1, (nw - rank.min) / (nextRank.min - rank.min))) : 1;
-  const goal = GOALS[st.goalIndex];
+  const goal = goalsFor(st.homeRegion)[st.goalIndex];
   const pulse = regionPulse(st);
   const R = REGION[st.currentRegion];
   const [goalOpen, setGoalOpen] = useState(false);

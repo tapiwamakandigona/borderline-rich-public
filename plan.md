@@ -104,7 +104,7 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         rm_nephew "Refuse" has a real effect; "an Egg Stand" [new 9, 10, 11] (F6, F9)
   - [ ] T12d Evidence: ui.spec compares the card estimate with the real income; F15/F16 wording matches
         the specs [new 7; prior 13] (F15, F16)
-  - [ ] T12e Region goal chains: the first 10–20 min of goals teach each region's signature [new 8; prior 2] (F3, F10)
+  - [x] T12e Region goal chains: the first 10–20 min of goals teach each region's signature [new 8; prior 2] (F3, F10)
   - [ ] T12f Visuals: follow-camera framing, readable Neon Vale day, Amberfield meadow ground [new 6; prior 6] (F13)
   - [ ] T12g Re-run the critic until PASS
 - [x] T13 Mobile performance + Play Store bundle (owner request 2026-10-03 19:59 UTC): per-lot geometry

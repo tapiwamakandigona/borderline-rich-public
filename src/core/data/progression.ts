@@ -1,4 +1,4 @@
-import type { GameState, VehicleId } from '../types';
+import type { Category, GameState, RegionId, VehicleId } from '../types';
 import { BIZ } from './businesses';
 import { REGION_IDS } from './regions';
 import { getCity } from '../city';
@@ -84,5 +84,56 @@ export const GOALS: GoalDef[] = [
   { id: 'mogul', text: 'Reach Mogul rank ($10M net worth)', hint: 'Big lots, big businesses, big numbers.', gold: 100, check: (s) => s.stats.rankIndex >= 6 },
   { id: 'acquire', text: 'Acquire a rival company outright', hint: 'Rivals → Acquire, once you are 1.5× their size.', gold: 200, check: (s) => s.stats.acquisitions >= 1 },
 ];
+
+// ── Region goal chains (T12e, critic #2 finding 8) ────────────────────────────
+// The starting region changes the first 10–20 minutes: two signature goals are woven into the
+// generic onboarding chain (after "collect" and after "level 5") and teach the home mechanic.
+const homeCount = (s: GameState, cat: Category) =>
+  Object.values(s.regions[s.homeRegion].lots).filter((l) => l.owner === 'player' && !!l.biz && BIZ[l.biz].category === cat).length;
+
+export const REGION_GOALS: Record<RegionId, [GoalDef, GoalDef]> = {
+  solenne: [
+    { id: 'sig_solenne_1', text: 'Run 2 logistics businesses', hint: 'Free Port: every ship in or out of Solenne lifts logistics income +20 % (up to 3 ships).', cash: 120, check: (s) => homeCount(s, 'logistics') >= 2 },
+    { id: 'sig_solenne_2', text: 'Ship cargo out of the Free Port', hint: 'Open Trade: Solenne exports pay half the import tariff, and the docks get busier.', gold: 15, check: (s) => s.stats.shipments >= 1 },
+  ],
+  redmesa: [
+    { id: 'sig_redmesa_1', text: 'Run 2 energy businesses', hint: 'Energy income follows the fuel index on your HUD (×0.6–1.6). Fuel Pumps need no permit.', cash: 120, check: (s) => homeCount(s, 'energy') >= 2 },
+    { id: 'sig_redmesa_2', text: 'Open a Gas Station', hint: 'Gas Stations need a permit: wait for the clerk, or expedite it for 15 % of the price (+heat).', gold: 15,
+      check: (s) => Object.values(s.regions.redmesa.lots).some((l) => l.owner === 'player' && l.biz === 'gasstation') },
+  ],
+  neonvale: [
+    { id: 'sig_neonvale_1', text: 'Run 2 tech businesses', hint: 'Tech income rides the hype meter (×0.7–1.5): build while it is low, cash in when it peaks.', cash: 120, check: (s) => homeCount(s, 'tech') >= 2 },
+    { id: 'sig_neonvale_2', text: 'Raise a venture round', hint: 'Politics → Raise a VC round: investors pay cash now for 25 % of your Neon Vale income for 30 min.', gold: 15, check: (s) => s.regions.neonvale.vars.vcUntil > 0 },
+  ],
+  amberfield: [
+    { id: 'sig_amberfield_1', text: 'Run 2 farms', hint: 'Farm income follows the seasons: harvest pays ×1.6, winter ×0.5.', cash: 120, check: (s) => homeCount(s, 'agri') >= 2 },
+    { id: 'sig_amberfield_2', text: 'Join the co-op: own 3 farms', hint: 'Three farms in Amberfield form a co-op: every farm earns +15 %.', gold: 15, check: (s) => homeCount(s, 'agri') >= 3 },
+  ],
+  verano: [
+    { id: 'sig_verano_1', text: 'Run 2 hospitality businesses', hint: 'Tourist seasons swing every 2 days: high season ×1.5, low season ×0.7.', cash: 120, check: (s) => homeCount(s, 'hospitality') >= 2 },
+    { id: 'sig_verano_2', text: 'Buy hurricane cover', hint: 'Politics → Hurricane cover, before a storm hits your beachfront.', gold: 15, check: (s) => s.regions.verano.vars.insuredUntil > 0 },
+  ],
+  ironhold: [
+    { id: 'sig_ironhold_1', text: 'Run 2 industry businesses', hint: 'Keep the union happy: under mood 30 a strike stops industry for 90 s.', cash: 120, check: (s) => homeCount(s, 'industry') >= 2 },
+    { id: 'sig_ironhold_2', text: 'Sign a wage deal with the union', hint: 'Politics → Wage deal: lifts union mood and slows its decline — strikes come far less often.', gold: 15, check: (s) => s.regions.ironhold.vars.wageDeal > 0 },
+  ],
+};
+
+const chains = new Map<RegionId, GoalDef[]>();
+/** The goal chain for a home region: generic onboarding with the region's two signature goals woven in. */
+export function goalsFor(home: RegionId): GoalDef[] {
+  let c = chains.get(home);
+  if (!c) {
+    const [a, b] = REGION_GOALS[home];
+    c = [];
+    for (const g of GOALS) {
+      c.push(g);
+      if (g.id === 'collect') c.push(a);
+      if (g.id === 'level5') c.push(b);
+    }
+    chains.set(home, c);
+  }
+  return c;
+}
 
 export const isBizAgri = (bizId: string | null) => !!bizId && BIZ[bizId].category === 'agri';

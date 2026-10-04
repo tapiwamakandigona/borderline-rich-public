@@ -2,7 +2,7 @@
 import type { GameState } from './types';
 import { DT } from './constants';
 import { REGION_IDS } from './data/regions';
-import { GOALS, RANKS, rankIndexFor } from './data/progression';
+import { goalsFor, RANKS, rankIndexFor } from './data/progression';
 import { derived, netWorth, tillCap } from './economy';
 import { mechanicsTick, offshoreActive } from './mechanics';
 import { marketTick, resolveShipment } from './trade';
@@ -24,8 +24,9 @@ export function progressCheck(state: GameState): void {
     state.gold += r.gold;
     notify(state, `RANK UP — ${r.name}! +${r.gold} gold`, 'good');
   }
-  while (state.goalIndex < GOALS.length && GOALS[state.goalIndex].check(state)) {
-    const g = GOALS[state.goalIndex];
+  const goals = goalsFor(state.homeRegion);
+  while (state.goalIndex < goals.length && goals[state.goalIndex].check(state)) {
+    const g = goals[state.goalIndex];
     const cash = Math.round((g.cash ?? 0) * costIndex(state.homeRegion));
     state.cash += cash;
     state.gold += g.gold ?? 0;
