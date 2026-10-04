@@ -137,3 +137,53 @@ test('back closes the top overlay first; events still need a choice', async ({ p
   expect(await ev<boolean>(page, 'b.session.back()')).toBe(false);
   expect(errors).toEqual([]);
 });
+
+// T12b (critic #2 findings 4, 5): on the smallest supported phone, toasts never sit on the lot card's
+// header or the cash card (with a card open, with a sheet open), and the region starter leads a vacant lot.
+test('toasts stay clear of the lot card and the cash card; the local pick leads (360x640)', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await freshStart(page, 'redmesa');
+  await ev(page, 'b.quiet()');
+  await ev(page, 'b.give(5000)');
+  type Box = { x: number; y: number; width: number; height: number };
+  const hit = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  const clear = async (what: string) => {
+    const toasts = page.locator('.toast');
+    await expect(toasts.first()).toBeVisible();
+    const cash = (await page.locator('[data-testid="cash"]').boundingBox())!;
+    const card = page.locator('[data-testid="lot-card"]');
+    const head = (await card.count()) ? await card.locator('.lot-head').boundingBox() : null;
+    for (const t of await toasts.all()) {
+      const box = (await t.boundingBox())!;
+      expect(hit(box, cash), `${what}: toast over the cash card`).toBe(false);
+      if (head) expect(hit(box, head), `${what}: toast over the lot-card header`).toBe(false);
+    }
+  };
+  const lot = await ev<string>(page, "b.findLot('vacant', 'small')");
+  await ev(page, `b.teleport('${lot}')`);
+  await page.waitForTimeout(1200);
+  await ev(page, `b.session.select('${lot}')`);
+  await expect(page.locator('[data-testid="lot-card"]')).toBeVisible();
+  // The region's starter is the first option and tagged as the local pick.
+  await expect(page.locator('[data-testid="biz-list"] > button').first()).toHaveAttribute('data-testid', 'build-fuelpump');
+  await expect(page.locator('[data-testid="local-pick"]')).toHaveCount(1);
+  await page.locator('[data-testid="build-fuelpump"]').click();
+  await expect(page.locator('[data-testid="lot-card"]')).toHaveAttribute('data-owner', 'player');
+  await ev(page, "b.session.toast('Guard toast with a long enough line to wrap onto two lines on a small phone', 'good')");
+  await page.waitForTimeout(400);
+  await clear('lot card');
+  await page.screenshot({ path: 'e2e/__shots__/ui-360-owned-toast.png' });
+  await page.locator('.lot-card .icon-btn').click();
+  for (const id of ['empire', 'politics']) {
+    await page.locator(`[data-testid="nav-${id}"]`).click();
+    await expect(page.locator(`[data-sheet="${id}"]`)).toBeVisible();
+    await ev(page, `b.session.toast('Sheet guard toast ${id}', 'info')`);
+    await page.waitForTimeout(450);
+    await clear(`sheet ${id}`);
+    await page.screenshot({ path: `e2e/__shots__/ui-360-sheet-${id}-toast.png` });
+    await page.keyboard.press('Escape'); // the sheet covers the nav on a 640 px screen
+    await expect(page.locator(`[data-sheet="${id}"]`)).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});

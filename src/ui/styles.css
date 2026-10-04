@@ -145,6 +145,8 @@ p { margin: 6px 0; line-height: 1.38; }
 .bo-name { display: flex; justify-content: space-between; gap: 8px; font-weight: 800; }
 .fit { font-style: normal; font-size: 11.5px; font-weight: 700; }
 .fit.muted { color: var(--muted); }
+.local-pick { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); background: var(--gold); border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+.biz-opt.local { border-color: var(--gold); }
 .bo-blurb { font-size: 12.5px; color: var(--muted); }
 .bo-row { display: flex; gap: 12px; font-size: 13px; font-weight: 700; }
 .permit { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(255, 90, 95, 0.1); border: 1px solid rgba(255, 90, 95, 0.3); border-radius: 12px; padding: 6px 6px 6px 10px; font-size: 13px; }
@@ -278,7 +280,8 @@ table.market { width: 100%; border-collapse: collapse; font-size: 12px; font-var
 .rankup b { display: block; font-family: var(--display); font-size: 26px; font-weight: 800; line-height: 1.1; }
 .rankup span { display: block; font-family: var(--display); font-weight: 600; font-size: 15px; margin-top: 4px; }
 .toasts { position: absolute; left: 12px; right: 12px; top: calc(212px + var(--safe-t)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-.toasts.top { top: calc(8px + var(--safe-t)); }
+.toasts.sheet { top: auto; bottom: calc(14px + var(--safe-b)); }
+.toasts.card { top: auto; }
 .toast { max-width: 100%; background: rgba(20, 22, 27, 0.94); border: 1px solid var(--line); border-left: 4px solid var(--paper); border-radius: 12px; padding: 7px 11px; font-size: 13px; line-height: 1.3; font-weight: 600; animation: drop 0.25s ease-out; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .toast.good { border-left-color: var(--mint); } .toast.bad { border-left-color: var(--red); } .toast.rival { border-left-color: #b48cff; }
 .toast.politics { border-left-color: #6fb7ff; } .toast.trade { border-left-color: var(--gold); }

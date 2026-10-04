@@ -96,8 +96,10 @@ Feature ids refer to `features.json`. Check a box only when the feature's verify
         Done 2026-10-03: `RivalDef.startWorth` (net worth at t = 0, 60 % in businesses ≤ level 25), rivals
         bank 25 % of profit, wars only where the buy-out ≤ your net worth (toast names the price), stale
         offers fall through; the balance bot passes a home rival in every 1–2★ region; difficulty.test 8 seeds
-  - [ ] T12b Toasts never cover the lot-card header or the cash card (360×640) + e2e guard; the region
+  - [x] T12b Toasts never cover the lot-card header or the cash card (360×640) + e2e guard; the region
         starter is listed first on a vacant lot, tagged as the local pick [new 4, 5; prior 7] (F14, F15)
+        Done 2026-10-04: toasts dock above the measured lot card (newest only) or at the screen bottom over a
+        sheet; starter first + gold "Local pick" tag; ui.spec 360×640 guard (card + 2 sheets) passes
   - [x] T12c Text tells the truth: Solenne Free Port panel + no transship option for Solenne residents;
         rm_nephew "Refuse" has a real effect; "an Egg Stand" [new 9, 10, 11] (F6, F9)
   - [ ] T12d Evidence: ui.spec compares the card estimate with the real income; F15/F16 wording matches

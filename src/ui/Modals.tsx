@@ -1,5 +1,6 @@
 // Modal layer: events with consequence previews, welcome-back earnings, rank-up banner, the
 // sandbox payment sheet, toasts and floating money pops.
+import { useLayoutEffect, useState } from 'preact/hooks';
 import { useSession, Btn, Sheet } from './kit';
 import { Icon } from './icons';
 import { eventView, resolveEvent } from '../core/events';
@@ -120,12 +121,32 @@ export function SettingsSheet() {
   );
 }
 
-export function Toasts({ top = false }: { top?: boolean }) {
+/**
+ * Toasts never cover the money card or a lot card's header (T12b):
+ * - free: below the HUD (no card, no sheet);
+ * - card: docked just above the open lot card (measured), newest toast only;
+ * - sheet: docked at the screen bottom, over the sheet's lower edge (never the cash card on top).
+ */
+export function Toasts({ mode = 'free' }: { mode?: 'free' | 'card' | 'sheet' }) {
   const s = useSession();
+  const [bottom, setBottom] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (mode !== 'card') { setBottom(null); return; }
+    let raf = 0;
+    const measure = () => {
+      const card = document.querySelector('.lot-card');
+      if (card) setBottom(Math.max(0, window.innerHeight - card.getBoundingClientRect().top + 6));
+      raf = requestAnimationFrame(measure); // follows the card's rise animation and content changes
+    };
+    measure();
+    return () => cancelAnimationFrame(raf);
+  }, [mode]);
   if (s.modalOpen()) return null;
+  const list = mode === 'card' ? s.toasts.value.slice(-1) : s.toasts.value;
+  const style = mode === 'card' && bottom !== null ? { top: 'auto', bottom: `${bottom}px` } : undefined;
   return (
-    <div class={`toasts${top ? ' top' : ''}`} aria-live="polite">
-      {s.toasts.value.map((t) => <div key={t.id} class={`toast ${t.kind}`}>{t.text}</div>)}
+    <div class={`toasts ${mode}`} aria-live="polite" style={style}>
+      {list.map((t) => <div key={t.id} class={`toast ${t.kind}`}>{t.text}</div>)}
     </div>
   );
 }

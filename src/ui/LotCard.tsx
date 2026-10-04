@@ -2,7 +2,7 @@
 import { useState } from 'preact/hooks';
 import { useSession, Btn, Stat, Bar } from './kit';
 import { Icon } from './icons';
-import { BIZ } from '../core/data/businesses';
+import { BIZ, STARTER } from '../core/data/businesses';
 import { REGION } from '../core/data/regions';
 import { getCity } from '../core/city';
 import {
@@ -74,7 +74,9 @@ export function LotCard() {
       </>
     );
   } else if (ls.owner === 'vacant') {
-    const opts = allowedBiz(rid, def);
+    const starter = STARTER[rid];
+    // The region's starter leads the list (tagged): a new player meets the local identity first (T12b).
+    const opts = [...allowedBiz(rid, def)].sort((a, b) => Number(b.id === starter) - Number(a.id === starter));
     const land = landPrice(st, rid, def);
     body = (
       <>
@@ -89,9 +91,9 @@ export function LotCard() {
             const lic = R.licences?.[b.id];
             const afford = st.cash >= price;
             return (
-              <button key={b.id} class={`biz-opt${afford && near ? '' : ' dim'}`} data-testid={`build-${b.id}`} disabled={!near}
+              <button key={b.id} class={`biz-opt${afford && near ? '' : ' dim'}${b.id === starter ? ' local' : ''}`} data-testid={`build-${b.id}`} disabled={!near}
                 onClick={() => s.run((g) => buyVacant(g, rid, id, b.id), { sfx: 'buy', lot: id, shake: JUICE.shake.buy, pulse: 'grow' })}>
-                <span class="bo-name">{b.name}<em class={`fit ${f.tone}`}>{f.label}</em></span>
+                <span class="bo-name"><span>{b.name}{b.id === starter && <em class="local-pick" data-testid="local-pick">Local pick</em>}</span><em class={`fit ${f.tone}`}>{f.label}</em></span>
                 <span class="bo-blurb">{b.blurb}</span>
                 <span class="bo-row"><b class="gold">{money(price)}</b><span class="mint" data-testid={`est-${b.id}`}>≈ {perSec(f.est)}</span>
                   {wait > 0 && <span class="red">permit ~{duration(wait)}</span>}

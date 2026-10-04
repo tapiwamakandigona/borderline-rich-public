@@ -37,7 +37,7 @@ export function App() {
       <EventModal />
       <WelcomeBack />
       <PurchaseConfirm />
-      <Toasts top={!!sheet} />
+      <Toasts mode={sheet ? 'sheet' : s.selected.value ? 'card' : 'free'} />
     </div>
   );
 }

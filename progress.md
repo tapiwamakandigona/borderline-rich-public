@@ -143,3 +143,10 @@
 - 2026-10-03 Play compliance: Settings sheet links the privacy policy (tapiwamakandigona.github.io/emberdelve/store/borderline-rich-privacy.html). npm run ci green (113 tests).
 - 2026-10-03 Audio: procedural per-region ambient music (src/audio/music.ts; shares the Sfx context, follows the Sound toggle, mutes in background). tests/music.test.ts. npm run ci green (16 files / 115 tests, boot set 20,752 B). VERIFIED locally; on-device listen ASSUMED pending.
 - 2026-10-03 CI: android-smoke dismisses a system-launcher ANR dialog ("Wait") that hid the WebView in run #13 (infra flake; our app's ANR/crash still fails). VERIFIED: bash -n + android_ui.py finds the dialog and Wait button in run #13's dump.
+
+## 2026-10-04 — T12b toasts + local pick (Viktor)
+- Toasts: mode free/card/sheet. Card: docked 6 px above the measured `.lot-card` (rAF follow), newest toast only.
+  Sheet: docked at the screen bottom (was top:8px over the cash card). Starter business sorted first on vacant
+  lots with a gold "Local pick" tag. VERIFIED: new e2e `toasts stay clear … (360x640)` passes locally
+  (card + empire + politics sheets, bounding boxes vs cash card and `.lot-head`); full `ui.spec` earlier run:
+  the 2 existing tests passed. `npm run ci` passed (typecheck, vitest, build, budget 20752/32000).
